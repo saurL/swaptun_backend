@@ -1,0 +1,16 @@
+[package]
+name = "swaptun-migrations"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+sea-orm = { version = "1.1.7", features = [
+  "sqlx-postgres",
+  "runtime-tokio-native-tls",
+  "macros",
+
+] }
+sea-orm-migration = "1.1.7"
+
+
