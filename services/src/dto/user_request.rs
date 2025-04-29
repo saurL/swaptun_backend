@@ -19,7 +19,7 @@ pub struct UpdateUserRequest {
     pub email: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct GetUsersParams {
     pub include_deleted: Option<bool>,
 }
@@ -55,19 +55,18 @@ pub struct CreateUserRequest {
     pub email: String,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Debug, Validate)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
 }
-
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Serialize, Debug, Validate)]
 pub struct LoginEmailRequest {
     pub email: String,
     pub password: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct LoginResponse {
     pub token: String,
     pub user_id: i32,
@@ -79,7 +78,7 @@ pub struct VerifyTokenRequest {
     pub token: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct VerifyTokenResponse {
     pub valid: bool,
 }
