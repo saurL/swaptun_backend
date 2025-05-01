@@ -2,11 +2,14 @@ pub mod auth;
 pub mod deezer;
 pub mod dto;
 pub mod error;
+pub mod music;
+pub mod playlist;
 pub mod spotify;
 pub mod user;
 pub mod validators;
-
 pub use deezer::*;
 pub use dto::*;
+pub use music::*;
+pub use playlist::*;
 pub use spotify::*;
 pub use user::*;

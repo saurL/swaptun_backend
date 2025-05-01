@@ -15,9 +15,11 @@ env_logger = "0.11.7"
 log = "0.4.27"
 rand_core = { version = "0.9.3", features = ["std"] }
 
-sea-orm = { version = "1.1.7", features = [
+sea-orm = { version = "1.1.10", features = [
   "sqlx-postgres",
-  "runtime-tokio-native-tls",
+  "runtime-tokio-rustls",
+  "runtime-actix-rustls",
+  "runtime-async-std-rustls",
   "macros",
 
 ] }

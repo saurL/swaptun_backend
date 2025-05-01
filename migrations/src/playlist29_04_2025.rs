@@ -1,5 +1,7 @@
 use sea_orm_migration::prelude::*;
 
+use crate::m20250319_093000_create_tbl_users::TblUsers;
+
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -21,14 +23,22 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Playlist::Name).string().not_null())
                     .col(ColumnDef::new(Playlist::Description).string().null())
                     .col(
-                        ColumnDef::new(Playlist::CreatedAt)
-                            .timestamp_with_time_zone()
-                            .not_null(),
+                        ColumnDef::new(Playlist::CreatedOn)
+                            .timestamp()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
                     )
                     .col(
-                        ColumnDef::new(Playlist::UpdatedAt)
-                            .timestamp_with_time_zone()
-                            .not_null(),
+                        ColumnDef::new(Playlist::UpdatedOn)
+                            .timestamp()
+                            .not_null()
+                            .default(Expr::current_timestamp()),
+                    )
+                    .col(ColumnDef::new(Playlist::UserId).integer().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(Playlist::Table, Playlist::UserId)
+                            .to(TblUsers::Table, TblUsers::Id),
                     )
                     .to_owned(),
             )
@@ -46,8 +56,9 @@ impl MigrationTrait for Migration {
 pub enum Playlist {
     Table,
     Id,
+    UserId,
     Name,
     Description,
-    CreatedAt,
-    UpdatedAt,
+    CreatedOn,
+    UpdatedOn,
 }

@@ -1,6 +1,7 @@
-use actix_web::{HttpResponse, web};
+use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
 use sea_orm::DbConn;
 
+use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{CreateUserRequest, GetUsersParams, UpdateUserRequest, UserService};
 
@@ -62,8 +63,22 @@ pub async fn update_user(
     db: web::Data<DbConn>,
     path: web::Path<i32>,
     request: web::Json<UpdateUserRequest>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, AppError> {
+    let claims = req.extensions().get::<Claims>().cloned();
     let user_id = path.into_inner();
+    if let Some(claims) = claims {
+        if claims.user_id != user_id {
+            return Err(AppError::Unauthorized(
+                "You are not authorized to update this user".to_string(),
+            ));
+        }
+    } else {
+        return Err(AppError::Unauthorized(
+            "You are not authorized to update this user".to_string(),
+        ));
+    }
+
     let user_service = UserService::new(db.get_ref().clone().into());
     let updated_user = user_service
         .update_user(request.into_inner(), user_id)

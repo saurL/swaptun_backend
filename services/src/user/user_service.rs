@@ -1,4 +1,4 @@
-use crate::auth::{generate_token, verify_password};
+use crate::auth::{Claims, generate_token, verify_password};
 use crate::validators::user_validators::process_validation_errors;
 use crate::{
     auth::{hash_password, validate_token},
@@ -8,8 +8,8 @@ use chrono::{Local, NaiveDateTime};
 use log::{info, warn};
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult};
 use std::sync::Arc;
-use swaptun_models::{Model, UserActiveModel};
-use swaptun_repositories::user_repository;
+use swaptun_models::{UserActiveModel, UserModel};
+use swaptun_repositories::UserRepository;
 
 use crate::dto::{
     CreateUserRequest, GetUsersParams, LoginEmailRequest, LoginRequest, LoginResponse,
@@ -17,48 +17,52 @@ use crate::dto::{
 };
 
 pub struct UserService {
-    user_repository: user_repository::UserRepository,
+    user_repository: UserRepository,
 }
 
 impl UserService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         UserService {
-            user_repository: user_repository::UserRepository::new(db),
+            user_repository: UserRepository::new(db),
         }
     }
 
-    pub async fn find_all(&self, include_deleted: bool) -> Result<Vec<Model>, DbErr> {
+    pub async fn find_all(&self, include_deleted: bool) -> Result<Vec<UserModel>, DbErr> {
         self.user_repository.find_all(include_deleted).await
     }
 
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<Model>, DbErr> {
+    pub async fn find_by_id(&self, id: i32) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.find_by_id(id).await
     }
 
-    pub async fn find_by_username(&self, username: String) -> Result<Option<Model>, DbErr> {
+    pub async fn find_by_username(&self, username: String) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.find_by_username(username).await
     }
 
-    pub async fn find_by_email(&self, email: String) -> Result<Option<Model>, DbErr> {
+    pub async fn find_by_email(&self, email: String) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.find_by_email(email).await
     }
 
-    async fn create(&self, model: UserActiveModel) -> Result<Model, DbErr> {
+    async fn create(&self, model: UserActiveModel) -> Result<UserModel, DbErr> {
         self.user_repository.create(model).await
     }
 
-    pub async fn update(&self, model: UserActiveModel) -> Result<Model, DbErr> {
+    pub async fn update(&self, model: UserActiveModel) -> Result<UserModel, DbErr> {
         self.user_repository.update(model).await
     }
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
         self.user_repository.delete(id).await
     }
 
-    pub async fn soft_delete(&self, id: i32, now: NaiveDateTime) -> Result<Option<Model>, DbErr> {
+    pub async fn soft_delete(
+        &self,
+        id: i32,
+        now: NaiveDateTime,
+    ) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.soft_delete(id, now).await
     }
 
-    pub async fn restore(&self, id: i32, now: NaiveDateTime) -> Result<Option<Model>, DbErr> {
+    pub async fn restore(&self, id: i32, now: NaiveDateTime) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.restore(id, now).await
     }
 
@@ -102,13 +106,13 @@ impl UserService {
         Ok(())
     }
 
-    pub async fn get_users(&self, request: GetUsersParams) -> Result<Vec<Model>, DbErr> {
+    pub async fn get_users(&self, request: GetUsersParams) -> Result<Vec<UserModel>, DbErr> {
         let include_deleted = request.include_deleted.unwrap_or(false);
         let users = self.find_all(include_deleted).await?;
         Ok(users)
     }
 
-    pub async fn get_user(&self, id: i32) -> Result<Option<Model>, DbErr> {
+    pub async fn get_user(&self, id: i32) -> Result<Option<UserModel>, DbErr> {
         let user = self.find_by_id(id).await?;
         Ok(user)
     }
@@ -144,7 +148,7 @@ impl UserService {
         &self,
         request: UpdateUserRequest,
         id: i32,
-    ) -> Result<Model, AppError> {
+    ) -> Result<UserModel, AppError> {
         process_validation_errors(&request)?;
 
         info!("Attempting to update user with ID: {}", id);
@@ -343,6 +347,17 @@ impl UserService {
                 }
             }
             Err(err) => Err(err),
+        }
+    }
+
+    pub async fn get_user_from_claims(&self, claims: Claims) -> Result<UserModel, AppError> {
+        let user = self.find_by_id(claims.user_id).await?;
+        match user {
+            Some(user) => Ok(user),
+            None => Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                claims.user_id
+            ))),
         }
     }
 }

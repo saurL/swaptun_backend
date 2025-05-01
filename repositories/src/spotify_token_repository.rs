@@ -3,7 +3,7 @@ use sea_orm::ModelTrait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 use std::sync::Arc;
 use swaptun_models::{
-    Model, SpotifyTokenActiveModel, SpotifyTokenColumn, SpotifyTokenEntity, SpotifyTokenModel,
+    SpotifyTokenActiveModel, SpotifyTokenColumn, SpotifyTokenEntity, SpotifyTokenModel, UserModel,
 };
 pub struct SpotifyTokenRepository {
     db: Arc<DatabaseConnection>,
@@ -45,7 +45,7 @@ impl SpotifyTokenRepository {
             .await
     }
 
-    pub async fn get_token(&self, user_model: Model) -> Result<SpotifyTokenModel, DbErr> {
+    pub async fn get_token(&self, user_model: UserModel) -> Result<SpotifyTokenModel, DbErr> {
         let token = user_model
             .find_related(SpotifyTokenEntity)
             .one(self.db.as_ref())

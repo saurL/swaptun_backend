@@ -1,14 +1,12 @@
 pub mod api;
 pub mod config;
+use crate::config::AppConfig;
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use dotenv::dotenv;
 use sea_orm::{Database, DbConn};
-pub use swaptun_services::dto::*;
-
 use std::io;
-
-use crate::config::AppConfig;
 use swaptun_migrations::{Migrator, MigratorTrait};
+pub use swaptun_services::dto::*;
 
 #[tokio::main]
 pub async fn main() -> io::Result<()> {

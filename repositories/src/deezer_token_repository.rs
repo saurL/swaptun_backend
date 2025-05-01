@@ -3,7 +3,7 @@ use sea_orm::error::DbErr;
 use sea_orm::*;
 use std::sync::Arc;
 use swaptun_models::{
-    DeezerTokenActiveModel, DeezerTokenColumn, DeezerTokenEntity, DeezerTokenModel, Model,
+    DeezerTokenActiveModel, DeezerTokenColumn, DeezerTokenEntity, DeezerTokenModel, UserModel,
 };
 
 pub struct DeezerTokenRepository {
@@ -37,7 +37,7 @@ impl DeezerTokenRepository {
             .await
     }
 
-    pub async fn get_token(&self, user_model: Model) -> Result<DeezerTokenModel, DbErr> {
+    pub async fn get_token(&self, user_model: UserModel) -> Result<DeezerTokenModel, DbErr> {
         let token = user_model
             .find_related(DeezerTokenEntity)
             .one(self.db.as_ref())

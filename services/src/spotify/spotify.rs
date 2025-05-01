@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
-use swaptun_models::{Model, SpotifyTokenActiveModel, SpotifyTokenModel};
+use swaptun_models::{SpotifyTokenActiveModel, SpotifyTokenModel, UserModel};
 use swaptun_repositories::spotify_token_repository::SpotifyTokenRepository;
 pub struct SpotifyService {
     spotify_token_repository: SpotifyTokenRepository,
@@ -77,7 +77,7 @@ impl SpotifyService {
             .map_err(AppError::from)
     }
 
-    pub async fn get_token(&self, user_model: Model) -> Result<SpotifyTokenModel, AppError> {
+    pub async fn get_token(&self, user_model: UserModel) -> Result<SpotifyTokenModel, AppError> {
         self.spotify_token_repository
             .get_token(user_model)
             .await

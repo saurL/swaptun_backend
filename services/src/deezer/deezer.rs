@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::error::AppError;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
-use swaptun_models::{DeezerTokenActiveModel, Model};
+use swaptun_models::{DeezerTokenActiveModel, UserModel};
 use swaptun_repositories::deezer_token_repository::DeezerTokenRepository;
 
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
@@ -81,7 +81,7 @@ impl DeezerService {
 
     pub async fn get_token(
         &self,
-        user_model: Model,
+        user_model: UserModel,
     ) -> Result<swaptun_models::DeezerTokenModel, AppError> {
         self.deezer_token_repository
             .get_token(user_model)

@@ -1,7 +1,5 @@
 use sea_orm_migration::prelude::*;
 
-use crate::m20250319_093000_create_tbl_users::TblUsers;
-
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -11,37 +9,39 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(TblSpotifyTokens::Table)
+                    .table(MusicPlaylist::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(TblSpotifyTokens::Id)
+                        ColumnDef::new(MusicPlaylist::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
                     .col(
-                        ColumnDef::new(TblSpotifyTokens::UserId)
+                        ColumnDef::new(MusicPlaylist::PlaylistId)
                             .integer()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(TblSpotifyTokens::Token).string().not_null())
                     .col(
-                        ColumnDef::new(TblSpotifyTokens::CreatedOn)
-                            .timestamp()
-                            .not_null()
-                            .default(Expr::current_timestamp()),
+                        ColumnDef::new(MusicPlaylist::MusicTitle)
+                            .string()
+                            .not_null(),
                     )
                     .col(
-                        ColumnDef::new(TblSpotifyTokens::UpdatedOn)
-                            .timestamp()
-                            .not_null()
-                            .default(Expr::current_timestamp()),
+                        ColumnDef::new(MusicPlaylist::MusicArtist)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(MusicPlaylist::MusicAlbum)
+                            .string()
+                            .not_null(),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(TblSpotifyTokens::Table, TblSpotifyTokens::UserId)
-                            .to(TblUsers::Table, TblUsers::Id),
+                            .from(MusicPlaylist::Table, MusicPlaylist::PlaylistId)
+                            .to(Playlist::Table, Playlist::Id),
                     )
                     .to_owned(),
             )
@@ -50,17 +50,23 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(TblSpotifyTokens::Table).to_owned())
+            .drop_table(Table::drop().table(MusicPlaylist::Table).to_owned())
             .await
     }
 }
 
 #[derive(Iden)]
-enum TblSpotifyTokens {
+enum MusicPlaylist {
     Table,
     Id,
-    UserId,
-    Token,
-    CreatedOn,
-    UpdatedOn,
+    PlaylistId,
+    MusicTitle,
+    MusicArtist,
+    MusicAlbum,
+}
+
+#[derive(Iden)]
+enum Playlist {
+    Table,
+    Id,
 }
