@@ -27,7 +27,7 @@ serde = "1.0.219"
 serde_json = "1.0.140"
 tokio = { version = "1.44.1", features = ["full"] }
 validator = { version = "0.20.0", features = ["derive"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls","json"] }
 swaptun-models = { path = "../models" }
 swaptun-migrations = { path = "../migrations" }
 swaptun-services = {path = "../services"}
