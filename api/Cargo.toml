@@ -27,7 +27,6 @@ full = [
   "swaptun-migrations",
   "chrono",
   "swaptun-services/default",
-  "dep:swaptun-services"
 ]
 
 [dependencies]
@@ -59,4 +58,4 @@ sea-orm = { version = "1.1.10", features = [
 ], optional = true }
 
 swaptun-migrations = { path = "../migrations", optional = true }
-swaptun-services = { path = "../services", optional = true, default-features = false }
+swaptun-services = { path = "../services", default-features = false }
