@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use crate::CreatePlaylistRequest;
+use crate::DeletePlaylistRequest;
+use crate::UpdatePlaylistRequest;
+use crate::error::AppError;
 use sea_orm::DatabaseConnection;
 use sea_orm::DbErr;
 use sea_orm::DeleteResult;
@@ -10,11 +14,6 @@ use swaptun_models::music_playlist;
 use swaptun_models::{PlaylistModel, UserModel};
 use swaptun_repositories::MusicPlaylistRepository;
 use swaptun_repositories::PlaylistRepository;
-
-use crate::CreatePlaylistRequest;
-use crate::DeletePlaylistRequest;
-use crate::UpdatePlaylistRequest;
-use crate::error::AppError;
 
 pub struct PlaylistService {
     pub playlist_repository: PlaylistRepository,

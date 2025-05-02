@@ -5,6 +5,9 @@ edition = "2024"
 
 [workspace]
 members = ["." , "api", "services","repositories"]
+[features]
+default=["full"]
+full= ["swaptun-api/default"]
 
 [dependencies]
-swaptun-api = { path = "api" }
+swaptun-api = { path = "./api", default-features = false }

@@ -1,15 +1,35 @@
 pub mod auth;
+#[cfg(feature = "full")]
 pub mod deezer;
-pub mod dto;
 pub mod error;
+#[cfg(feature = "full")]
 pub mod music;
+#[cfg(feature = "full")]
 pub mod playlist;
+#[cfg(feature = "full")]
 pub mod spotify;
+#[cfg(feature = "full")]
 pub mod user;
+
 pub mod validators;
+
+#[cfg(feature = "full")]
 pub use deezer::*;
-pub use dto::*;
+#[cfg(feature = "full")]
 pub use music::*;
+#[cfg(feature = "full")]
+pub use music::*;
+#[cfg(feature = "full")]
 pub use playlist::*;
+#[cfg(feature = "full")]
+pub use playlist::*;
+#[cfg(feature = "full")]
 pub use spotify::*;
+#[cfg(feature = "full")]
+pub use spotify::*;
+#[cfg(feature = "full")]
 pub use user::*;
+#[cfg(feature = "full")]
+pub use user::*;
+pub mod dto;
+pub use dto::*;

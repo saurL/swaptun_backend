@@ -3,17 +3,52 @@ name = "swaptun-api"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["full"]  # Aucun feaure activé par défaut
+
+
+# Active toute l’application complète
+full = [
+  "actix-web",
+  "actix-web-httpauth",
+  "actix-service",
+  "argon2",
+  "async-trait",
+  "dotenv",
+  "env_logger",
+  "log",
+  "rand_core",
+  "sea-orm",
+  "serde",
+  "serde_json",
+  "tokio",
+  "validator",
+  "reqwest",
+  "swaptun-migrations",
+  "chrono",
+  "swaptun-services/default",
+  "dep:swaptun-services"
+]
+
 [dependencies]
-actix-service = "2.0.3"
-actix-web = "4.10.2"
-actix-web-httpauth = "0.8.2"
-argon2 = "0.5.3"
-async-trait = "0.1.88"
-chrono = { version = "0.4.40", features = ["serde"] }
-dotenv = "0.15.0"
-env_logger = "0.11.7"
-log = "0.4.27"
-rand_core = { version = "0.9.3", features = ["std"] }
+# Chaque dépendance activée uniquement via une feature
+actix-service = { version = "2.0.3", optional = true }
+actix-web = { version = "4.10.2", optional = true }
+actix-web-httpauth = { version = "0.8.2", optional = true }
+argon2 = { version = "0.5.3", optional = true }
+async-trait = { version = "0.1.88", optional = true }
+dotenv = { version = "0.15.0", optional = true }
+env_logger = { version = "0.11.7", optional = true }
+log = { version = "0.4.27", optional = true }
+rand_core = { version = "0.9.3", features = ["std"], optional = true }
+serde = { version = "1.0.219", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.140", optional = true }
+validator = { version = "0.20.0", features = ["derive"], optional = true }
+chrono = { version = "0.4.40", features = ["serde"], optional = true }
+
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"], optional = true }
+
+tokio = { version = "1.44.1", features = ["full"], optional = true }
 
 sea-orm = { version = "1.1.10", features = [
   "sqlx-postgres",
@@ -21,13 +56,7 @@ sea-orm = { version = "1.1.10", features = [
   "runtime-actix-rustls",
   "runtime-async-std-rustls",
   "macros",
+], optional = true }
 
-] }
-serde = "1.0.219"
-serde_json = "1.0.140"
-tokio = { version = "1.44.1", features = ["full"] }
-validator = { version = "0.20.0", features = ["derive"] }
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls","json"] }
-swaptun-models = { path = "../models" }
-swaptun-migrations = { path = "../migrations" }
-swaptun-services = {path = "../services"}
+swaptun-migrations = { path = "../migrations", optional = true }
+swaptun-services = { path = "../services", optional = true, default-features = false }

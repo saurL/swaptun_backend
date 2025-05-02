@@ -1,13 +1,21 @@
+#[cfg(feature = "full")]
 pub mod api;
+#[cfg(feature = "full")]
 pub mod config;
+#[cfg(feature = "full")]
 use crate::config::AppConfig;
+#[cfg(feature = "full")]
 use actix_web::{App, HttpServer, middleware::Logger, web};
+#[cfg(feature = "full")]
 use dotenv::dotenv;
+#[cfg(feature = "full")]
 use sea_orm::{Database, DbConn};
+#[cfg(feature = "full")]
 use std::io;
+#[cfg(feature = "full")]
 use swaptun_migrations::{Migrator, MigratorTrait};
 pub use swaptun_services::dto::*;
-
+#[cfg(feature = "full")]
 #[tokio::main]
 pub async fn main() -> io::Result<()> {
     dotenv().ok();

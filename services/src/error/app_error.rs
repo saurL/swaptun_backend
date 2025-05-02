@@ -2,7 +2,6 @@ use actix_web::{HttpResponse, ResponseError};
 use sea_orm::DbErr;
 use serde::Serialize;
 use std::fmt;
-
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub status: String,
