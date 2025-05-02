@@ -3785,6 +3785,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "swaptun-backend"
+version = "0.1.0"
+dependencies = [
+ "swaptun-api",
+]
+
+[[package]]
 name = "swaptun-migrations"
 version = "0.1.0"
 dependencies = [
@@ -3833,13 +3840,6 @@ dependencies = [
  "testcontainers-modules",
  "tokio",
  "validator",
-]
-
-[[package]]
-name = "swaptun_backend"
-version = "0.1.0"
-dependencies = [
- "swaptun-api",
 ]
 
 [[package]]
