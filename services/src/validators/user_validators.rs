@@ -1,5 +1,6 @@
 use crate::auth::UserRole;
 use crate::error::AppError;
+#[cfg(feature = "full")]
 use actix_web::web;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -68,7 +69,7 @@ pub fn process_validation_errors<T: Validate>(item: &T) -> Result<(), AppError> 
     }
     Ok(())
 }
-
+#[cfg(feature = "full")]
 pub fn process_json_validation<T: Validate>(json: &web::Json<T>) -> Result<(), AppError> {
     process_validation_errors(&json.0)
 }

@@ -17,7 +17,8 @@ full = [
   "swaptun-migrations",
   "swaptun-repositories",
   "swaptun-models",
-  "chrono"
+  "chrono",
+  "actix-web"
 ]
 
 
@@ -33,7 +34,7 @@ sea-orm = { version = "1.1.10",  features = [
   "runtime-async-std-rustls",
   "macros",
 ] }
-actix-web = { version = "4.10.2" }
+actix-web = { version = "4.10.2",optional = true}
 chrono = { version = "0.4.40", features = ["serde"], optional = true }
 tokio = { version = "1.44.1", features = ["full"], optional = true }
 argon2 = { version = "0.5.3", optional = true }

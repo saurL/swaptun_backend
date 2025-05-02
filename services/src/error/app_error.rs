@@ -1,3 +1,4 @@
+#[cfg(feature = "full")]
 use actix_web::{HttpResponse, ResponseError};
 use sea_orm::DbErr;
 use serde::Serialize;
@@ -28,6 +29,7 @@ impl fmt::Display for AppError {
         }
     }
 }
+#[cfg(feature = "full")]
 
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
