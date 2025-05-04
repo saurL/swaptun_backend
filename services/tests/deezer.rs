@@ -1,8 +1,7 @@
 use swaptun_services::DeezerService;
-use swaptun_services::{AddTokenRequest, DeleteTokenRequest};
-mod test_database;
+use swaptun_services::TestDatabase;
 use swaptun_services::UserService;
-use test_database::TestDatabase;
+use swaptun_services::{AddTokenRequest, DeleteTokenRequest};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_create_and_verify_deezer_token() {

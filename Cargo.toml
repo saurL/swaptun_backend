@@ -12,3 +12,4 @@ full= ["swaptun-api/full"]
 
 [dependencies]
 swaptun-api = { path = "./api", default-features = false }
+rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli"] }

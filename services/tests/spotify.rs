@@ -1,7 +1,6 @@
+use swaptun_services::TestDatabase;
 use swaptun_services::user::UserService;
 use swaptun_services::{AddTokenRequest, DeleteTokenRequest, SpotifyService, UpdateTokenRequest};
-mod test_database;
-use test_database::TestDatabase;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_create_and_verify_spotify_token() {

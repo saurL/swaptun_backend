@@ -1,10 +1,18 @@
 use std::sync::Arc;
 
+use crate::SpotifyUrlResponse;
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
 use swaptun_models::{SpotifyTokenActiveModel, SpotifyTokenModel, UserModel};
 use swaptun_repositories::spotify_token_repository::SpotifyTokenRepository;
+
+use rspotify::{
+    AuthCodeSpotify, Credentials, OAuth,
+    model::{AdditionalType, Country, Market},
+    prelude::*,
+    scopes,
+};
 pub struct SpotifyService {
     spotify_token_repository: SpotifyTokenRepository,
 }
@@ -82,5 +90,27 @@ impl SpotifyService {
             .get_token(user_model)
             .await
             .map_err(AppError::from)
+    }
+
+    pub async fn get_authorization_url(&self) -> Result<SpotifyUrlResponse, AppError> {
+        let creds = Credentials::from_env().unwrap();
+
+        // Same for RSPOTIFY_REDIRECT_URI. You can also set it explictly:
+        //
+        // ```
+        // let oauth = OAuth {
+        //     redirect_uri: "http://localhost:8888/callback".to_string(),
+        //     scopes: scopes!("user-read-recently-played"),
+        //     ..Default::default(),
+        // };
+        // ```
+        let oauth = OAuth::from_env(scopes!("user-read-currently-playing")).unwrap();
+
+        let spotify = AuthCodeSpotify::new(creds, oauth);
+
+        // Obtaining the access token
+        let url = spotify.get_authorize_url(false).unwrap();
+        let response = SpotifyUrlResponse { url: url.clone() };
+        Ok(response)
     }
 }

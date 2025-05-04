@@ -1,5 +1,5 @@
+use crate::{CreateUserRequest, UserService};
 use std::sync::Arc;
-use swaptun_services::{CreateUserRequest, UserService};
 use testcontainers_modules::{
     postgres,
     testcontainers::{ContainerAsync, runners::AsyncRunner},
@@ -9,7 +9,7 @@ use sea_orm::{Database, DatabaseConnection};
 use swaptun_migrations::{Migrator, MigratorTrait};
 pub struct TestDatabase {
     pub container: Arc<ContainerAsync<postgres::Postgres>>,
-    db: Arc<DatabaseConnection>,
+    db: DatabaseConnection,
 }
 
 impl TestDatabase {
@@ -19,6 +19,10 @@ impl TestDatabase {
     }
 
     pub fn get_db(&self) -> Arc<DatabaseConnection> {
+        self.db.clone().into()
+    }
+
+    pub fn get_db_raw(&self) -> DatabaseConnection {
         self.db.clone()
     }
 
@@ -34,10 +38,7 @@ pub async fn setup_container() -> Arc<ContainerAsync<postgres::Postgres>> {
     Arc::new(container)
 }
 
-pub async fn setup_db() -> (
-    Arc<DatabaseConnection>,
-    Arc<ContainerAsync<postgres::Postgres>>,
-) {
+pub async fn setup_db() -> (DatabaseConnection, Arc<ContainerAsync<postgres::Postgres>>) {
     let container = setup_container().await;
     let host_ip = container.get_host().await.unwrap();
     let host_port = container.get_host_port_ipv4(5432).await.unwrap();
@@ -54,9 +55,7 @@ pub async fn setup_db() -> (
         .await
         .expect("Failed to run migrations");
 
-    let db = Arc::new(db);
-
-    let user_service = UserService::new(db.clone());
+    let user_service = UserService::new(Arc::new(db.clone()));
     let create_user_request = CreateUserRequest {
         username: "unique_user".to_string(),
         password: "hashed_passwor12D!".to_string(),

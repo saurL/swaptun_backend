@@ -9,27 +9,29 @@ pub mod playlist;
 #[cfg(feature = "full")]
 pub mod spotify;
 #[cfg(feature = "full")]
+pub mod test;
+#[cfg(feature = "full")]
 pub mod user;
-
-pub mod validators;
+#[cfg(feature = "full")]
+pub use test::*;
 
 #[cfg(feature = "full")]
 pub use deezer::*;
 #[cfg(feature = "full")]
 pub use music::*;
-#[cfg(feature = "full")]
-pub use music::*;
-#[cfg(feature = "full")]
-pub use playlist::*;
+
 #[cfg(feature = "full")]
 pub use playlist::*;
+
 #[cfg(feature = "full")]
 pub use spotify::*;
+
+#[cfg(feature = "full")]
+pub use user::*;
+
 #[cfg(feature = "full")]
 pub use spotify::*;
-#[cfg(feature = "full")]
-pub use user::*;
-#[cfg(feature = "full")]
-pub use user::*;
+
 pub mod dto;
+pub mod validators;
 pub use dto::*;

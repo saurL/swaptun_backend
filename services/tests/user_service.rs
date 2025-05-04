@@ -1,9 +1,8 @@
+use swaptun_services::TestDatabase;
 use swaptun_services::{
     CreateUserRequest, LoginEmailRequest, LoginRequest, UpdateUserRequest, UserService,
     VerifyTokenRequest,
 };
-mod test_database;
-use test_database::TestDatabase;
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_find_by_username_success() {
     let test_db = TestDatabase::new().await;

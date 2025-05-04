@@ -1,9 +1,8 @@
+use swaptun_services::TestDatabase;
 use swaptun_services::{
     CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
     UpdatePlaylistRequest, UserService,
 };
-mod test_database;
-use test_database::TestDatabase;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_create_playlist_success() {
