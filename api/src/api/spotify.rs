@@ -3,9 +3,8 @@ use sea_orm::DbConn;
 
 use swaptun_services::SpotifyService;
 use swaptun_services::error::AppError;
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.route("/authorization-url", web::post().to(get_authorization_url));
+    cfg.route("/authorization-url", web::get().to(get_authorization_url));
 }
 
 async fn get_authorization_url(db: web::Data<DbConn>) -> Result<HttpResponse, AppError> {
