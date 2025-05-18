@@ -5,3 +5,8 @@ use validator::Validate;
 pub struct SpotifyUrlResponse {
     pub url: String,
 }
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct GetAuthorizationUrlRequest {
+    pub port: u16,
+}

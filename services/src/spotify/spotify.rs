@@ -92,7 +92,7 @@ impl SpotifyService {
             .map_err(AppError::from)
     }
 
-    pub async fn get_authorization_url(&self) -> Result<SpotifyUrlResponse, AppError> {
+    pub async fn get_authorization_url(&self, port: u16) -> Result<SpotifyUrlResponse, AppError> {
         let creds = Credentials::from_env().unwrap();
 
         // Same for RSPOTIFY_REDIRECT_URI. You can also set it explictly:
@@ -104,7 +104,11 @@ impl SpotifyService {
         //     ..Default::default(),
         // };
         // ```
-        let oauth = OAuth::from_env(scopes!("user-read-currently-playing")).unwrap();
+        let oauth: OAuth = OAuth {
+            redirect_uri: format!("http://127.0.0.1:{}", port),
+            scopes: scopes!("user-read-recently-played"),
+            ..Default::default()
+        };
 
         let spotify = AuthCodeSpotify::new(creds, oauth);
 
