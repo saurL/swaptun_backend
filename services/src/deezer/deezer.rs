@@ -18,9 +18,13 @@ impl DeezerService {
         }
     }
 
-    pub async fn add_token(&self, request: AddTokenRequest) -> Result<(), AppError> {
+    pub async fn add_token(
+        &self,
+        request: AddTokenRequest,
+        user: UserModel,
+    ) -> Result<(), AppError> {
         let model = DeezerTokenActiveModel {
-            user_id: Set(request.user_id),
+            user_id: Set(user.id),
             token: Set(request.token),
             ..Default::default()
         };

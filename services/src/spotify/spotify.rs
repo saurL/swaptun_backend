@@ -20,13 +20,17 @@ pub struct SpotifyService {
 impl SpotifyService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self {
-            spotify_token_repository: SpotifyTokenRepository::new(db),
+            spotify_token_repository: SpotifyTokenRepository::new(db.clone()),
         }
     }
 
-    pub async fn add_token(&self, request: AddTokenRequest) -> Result<(), AppError> {
+    pub async fn add_token(
+        &self,
+        request: AddTokenRequest,
+        user: UserModel,
+    ) -> Result<(), AppError> {
         let model = SpotifyTokenActiveModel {
-            user_id: Set(request.user_id),
+            user_id: Set(user.id),
             token: Set(request.token),
             ..Default::default()
         };
@@ -105,7 +109,7 @@ impl SpotifyService {
         // };
         // ```
         let oauth: OAuth = OAuth {
-            redirect_uri: format!("http://127.0.0.1:{}", port),
+            redirect_uri: format!("https://127.0.0.1:{}", port),
             scopes: scopes!("user-read-recently-played"),
             ..Default::default()
         };
