@@ -1,27 +1,69 @@
-use std::sync::Arc;
-
-use crate::SpotifyUrlResponse;
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
-use sea_orm::{ActiveValue::Set, DatabaseConnection};
-use swaptun_models::{SpotifyTokenActiveModel, SpotifyTokenModel, UserModel};
-use swaptun_repositories::spotify_token_repository::SpotifyTokenRepository;
-
-use rspotify::{
-    AuthCodeSpotify, Credentials, OAuth,
-    model::{AdditionalType, Country, Market},
-    prelude::*,
-    scopes,
+use crate::{
+    CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse,
 };
+use futures::StreamExt;
+use log::{error, info};
+use rspotify::model::{PlayableItem, SimplifiedPlaylist};
+use rspotify::prelude::{BaseClient, OAuthClient};
+use sea_orm::IntoActiveModel;
+use std::sync::Arc;
+
+use sea_orm::{ActiveValue::Set, DatabaseConnection};
+use swaptun_models::{
+    PlaylistOrigin, SpotifyCodeActiveModel, SpotifyCodeModel, SpotifyTokenActiveModel,
+    SpotifyTokenModel, UserModel,
+};
+use swaptun_repositories::{
+    spotify_code_repository::SpotifyCodeRepository,
+    spotify_token_repository::SpotifyTokenRepository,
+};
+
+use chrono::{NaiveDate, Utc};
+use rspotify::{AuthCodeSpotify, Credentials, OAuth, Token, scopes};
+
 pub struct SpotifyService {
+    spotify_code_repository: SpotifyCodeRepository,
     spotify_token_repository: SpotifyTokenRepository,
+    playlist_service: PlaylistService,
+    music_service: MusicService,
 }
 
 impl SpotifyService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self {
+            spotify_code_repository: SpotifyCodeRepository::new(db.clone()),
             spotify_token_repository: SpotifyTokenRepository::new(db.clone()),
+            playlist_service: PlaylistService::new(db.clone()),
+            music_service: MusicService::new(db.clone()),
         }
+    }
+
+    pub async fn add_code(&self, code: String, user: &UserModel) -> Result<(), AppError> {
+        info!("Adding code");
+        match self.get_code(user.clone()).await {
+            Some(model) => {
+                let mut active_model = model.into_active_model();
+                active_model.token = Set(code.clone());
+                self.spotify_code_repository
+                    .save(active_model.into())
+                    .await
+                    .map_err(AppError::from)?;
+            }
+            None => {
+                let model = SpotifyCodeActiveModel {
+                    user_id: Set(user.id),
+                    token: Set(code.clone()),
+                    ..Default::default()
+                };
+                self.spotify_code_repository
+                    .save(model)
+                    .await
+                    .map_err(AppError::from)?;
+            }
+        }
+        Ok(())
     }
 
     pub async fn add_token(
@@ -29,40 +71,87 @@ impl SpotifyService {
         request: AddTokenRequest,
         user: UserModel,
     ) -> Result<(), AppError> {
-        let model = SpotifyTokenActiveModel {
-            user_id: Set(user.id),
-            token: Set(request.token),
-            ..Default::default()
-        };
-        self.spotify_token_repository
-            .create(model)
-            .await
-            .map(|_| ())
-            .map_err(AppError::from)
-    }
+        info!("Requesting token");
 
-    pub async fn get_user_token(
-        &self,
-        user_id: i32,
-    ) -> Result<Option<swaptun_models::SpotifyTokenModel>, AppError> {
-        self.spotify_token_repository
+        let spotify_client: AuthCodeSpotify = self.get_spotify_client().await?;
+        self.add_code(request.token.clone(), &user).await?;
+        match spotify_client.request_token(&request.token).await {
+            Ok(_) => match self.get_token(user.clone()).await {
+                Some(token_model) => {
+                    let arc_token = spotify_client.get_token();
+                    let guard = arc_token.lock().await.unwrap();
+                    let token = guard.as_ref().unwrap();
+                    let mut active_model = token_model.into_active_model();
+                    active_model.access_token = Set(token.access_token.clone());
+                    active_model.refresh_token = Set(token.refresh_token.clone());
+                    active_model.expires_at = Set(token.expires_at.unwrap().naive_utc());
+                    active_model.scope = Set(Some(
+                        token
+                            .scopes
+                            .iter()
+                            .next()
+                            .unwrap_or(&"".to_string())
+                            .to_string(),
+                    ));
+                    info!("Saving token dans ok{:?}", active_model);
+                    self.spotify_token_repository
+                        .save(active_model)
+                        .await
+                        .map_err(AppError::from)?;
+                }
+                None => {
+                    let arc_token = spotify_client.get_token();
+                    let guard = arc_token.lock().await.unwrap();
+                    let token = guard.as_ref().unwrap();
+
+                    let active_model = SpotifyTokenActiveModel {
+                        user_id: Set(user.id),
+                        access_token: Set(token.access_token.clone()),
+                        refresh_token: Set(token.refresh_token.clone()),
+                        expires_at: Set(token.expires_at.unwrap().naive_utc()),
+                        scope: Set(Some(
+                            token
+                                .scopes
+                                .iter()
+                                .next()
+                                .unwrap_or(&"".to_string())
+                                .to_string(),
+                        )),
+                        ..Default::default()
+                    };
+                    info!("Saving token dans error{:?}", active_model);
+                    self.spotify_token_repository
+                        .save(active_model)
+                        .await
+                        .map_err(AppError::from)?;
+                }
+            },
+            Err(e) => {
+                error!("Error requesting token {:?}", e);
+                return Err(AppError::InternalServerError);
+            }
+        }
+        Ok(())
+    }
+    pub async fn get_user_code(&self, user_id: i32) -> Result<Option<SpotifyCodeModel>, AppError> {
+        self.spotify_code_repository
             .find_by_user_id(user_id)
             .await
             .map_err(AppError::from)
     }
 
     pub async fn update_token(&self, request: UpdateTokenRequest) -> Result<(), AppError> {
-        let token_id = match self.get_user_token(request.user_id).await? {
+        let token_id = match self.get_user_code(request.user_id).await? {
             Some(token) => token.id,
-            None => return Err(AppError::NotFound("Token doesn't exsits".to_string())),
+            None => return Err(AppError::NotFound("Token doesn't exist".to_string())),
         };
-        let model = SpotifyTokenActiveModel {
+        let model = SpotifyCodeActiveModel {
             id: Set(token_id),
             user_id: Set(request.user_id),
             token: Set(request.new_token),
             ..Default::default()
         };
-        self.spotify_token_repository
+        self.spotify_code_repository
             .update(model)
             .await
             .map(|_| ())
@@ -72,28 +161,28 @@ impl SpotifyService {
     pub async fn delete_token(&self, request: DeleteTokenRequest) -> Result<(), AppError> {
         let user_id: i32 = request.user_id;
 
-        self.spotify_token_repository
+        self.spotify_code_repository
             .delete(user_id)
             .await
             .map(|_| ())
             .map_err(AppError::from)
     }
 
-    pub async fn get_token_by_user_id(
+    pub async fn get_code_by_user_id(
         &self,
         user_id: i32,
-    ) -> Result<Option<swaptun_models::SpotifyTokenModel>, AppError> {
-        self.spotify_token_repository
+    ) -> Result<Option<SpotifyCodeModel>, AppError> {
+        self.spotify_code_repository
             .find_by_user_id(user_id)
             .await
             .map_err(AppError::from)
     }
 
-    pub async fn get_token(&self, user_model: UserModel) -> Result<SpotifyTokenModel, AppError> {
-        self.spotify_token_repository
-            .get_token(user_model)
-            .await
-            .map_err(AppError::from)
+    pub async fn get_code(&self, user_model: UserModel) -> Option<SpotifyCodeModel> {
+        match self.spotify_code_repository.get_code(user_model).await {
+            Ok(code) => Some(code),
+            Err(_) => None,
+        }
     }
 
     pub async fn get_authorization_url(&self, port: u16) -> Result<SpotifyUrlResponse, AppError> {
@@ -109,8 +198,8 @@ impl SpotifyService {
         // };
         // ```
         let oauth: OAuth = OAuth {
-            redirect_uri: format!("https://127.0.0.1:{}", port),
-            scopes: scopes!("user-read-recently-played"),
+            redirect_uri: format!("http://127.0.0.1:{}", port),
+            scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private"),
             ..Default::default()
         };
 
@@ -118,7 +207,134 @@ impl SpotifyService {
 
         // Obtaining the access token
         let url = spotify.get_authorize_url(false).unwrap();
-        let response = SpotifyUrlResponse { url: url.clone() };
+        let response = SpotifyUrlResponse { url };
         Ok(response)
+    }
+
+    pub async fn get_user_playlists(
+        &self,
+        user: UserModel,
+    ) -> Result<Vec<SimplifiedPlaylist>, AppError> {
+        let spotify = self.get_spotify_client_connected(&user).await?;
+        match spotify.me().await {
+            Ok(spotify_user) => {
+                let mut playlist_models = Vec::new();
+                let mut playlists = spotify.user_playlists(spotify_user.id);
+                while let Some(playlist_result) = playlists.next().await {
+                    if let Ok(playlist) = playlist_result {
+                        playlist_models.push(playlist.clone());
+                        self.import_playlist(playlist, &user).await?;
+                    }
+                }
+
+                Ok(playlist_models)
+            }
+            Err(e) => {
+                error!("Error getting user playlists: {:?}", e);
+                Err(AppError::InternalServerError)
+            }
+        }
+    }
+
+    pub async fn import_playlist(
+        &self,
+        playlist: SimplifiedPlaylist,
+        user: &UserModel,
+    ) -> Result<(), AppError> {
+        let spotify = self.get_spotify_client_connected(&user).await?;
+        let mut tracks = spotify.playlist_items(playlist.id, None, None);
+        let request = CreatePlaylistRequest {
+            name: playlist.name,
+            origin: PlaylistOrigin::Spotify,
+            description: None,
+        };
+        let playlist = self.playlist_service.create(request, user.id).await?;
+        while let Some(track) = tracks.next().await {
+            if let Ok(track) = track {
+                if let Some(track) = track.track {
+                    match track {
+                        PlayableItem::Track(track) => {
+                            // a remplacer par l'api pour récupérer les genres
+                            let genre: Option<String> = None;
+                            let create_music_request = CreateMusicRequest {
+                                title: track.name,
+                                release_date: track
+                                    .album
+                                    .release_date
+                                    .unwrap_or_default()
+                                    .parse::<NaiveDate>()
+                                    .unwrap_or_default(),
+                                genre,
+                                artist: track
+                                    .artists
+                                    .first()
+                                    .map(|a| a.name.clone())
+                                    .unwrap_or_default(),
+                                album: track.album.name,
+                                description: None,
+                            };
+                            let music = self.music_service.create(create_music_request).await?;
+                            self.playlist_service.add_music(&playlist, music).await?;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn get_spotify_client(&self) -> Result<AuthCodeSpotify, AppError> {
+        let creds: Credentials = Credentials::from_env().unwrap();
+        let oauth: OAuth = OAuth {
+            redirect_uri: format!("http://127.0.0.1:8000"),
+            scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private"),
+            ..Default::default()
+        };
+        let spotify = AuthCodeSpotify::new(creds, oauth);
+
+        Ok(spotify)
+    }
+    pub async fn get_spotify_client_connected(
+        &self,
+        user_model: &UserModel,
+    ) -> Result<AuthCodeSpotify, AppError> {
+        let mut spotify = self.get_spotify_client().await?;
+        let token: Option<SpotifyTokenModel> = self.get_token(user_model.clone()).await;
+        if let Some(token) = token {
+            let expires_in = token.expires_at.and_utc().signed_duration_since(Utc::now());
+            spotify.token = Arc::new(rspotify::sync::Mutex::new(Some(Token {
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expires_at: Some(token.expires_at.and_utc()),
+                expires_in: expires_in.clone(),
+                scopes: scopes!(
+                    "playlist-read-private playlist-modify-public playlist-modify-private"
+                ),
+            })));
+            if expires_in.num_seconds() < 0 {
+                match spotify.refresh_token().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("Error refreshing token: {:?}", e);
+                        return Err(AppError::InternalServerError);
+                    }
+                }
+            }
+        } else {
+            return Err(AppError::NotFound("Token not found".to_string()));
+        }
+        Ok(spotify)
+    }
+    pub async fn get_token(&self, user_model: UserModel) -> Option<SpotifyTokenModel> {
+        match self
+            .spotify_token_repository
+            .get_token(user_model)
+            .await
+            .map_err(AppError::from)
+        {
+            Ok(token) => Some(token),
+            Err(_) => None,
+        }
     }
 }

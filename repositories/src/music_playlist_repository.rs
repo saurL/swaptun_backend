@@ -32,7 +32,7 @@ impl MusicPlaylistRepository {
 
     pub async fn delete_by_relation(
         &self,
-        playlist: PlaylistModel,
+        playlist: &PlaylistModel,
         music: MusicModel,
     ) -> Result<DeleteResult, DbErr> {
         MusicPlaylistEntity::delete_many()

@@ -4,14 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-
+swaptun-models = { path = "../models" }
 sea-orm = { version = "1.1.10", features = [
   "sqlx-postgres",
   "runtime-tokio-rustls",
   "runtime-actix-rustls",
   "runtime-async-std-rustls",
   "macros",
-
 ] }
 sea-orm-migration = "1.1.7"
 

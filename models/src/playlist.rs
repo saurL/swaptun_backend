@@ -2,6 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use sea_orm::entity::prelude::*;
 
+#[derive(EnumIter, DeriveActiveEnum, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "playlist_origin")]
+pub enum PlaylistOrigin {
+    #[sea_orm(string_value = "Spotify")]
+    Spotify,
+    #[sea_orm(string_value = "Deezer")]
+    Deezer,
+}
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "playlist")]
 pub struct Model {
@@ -10,6 +18,7 @@ pub struct Model {
     pub user_id: i32,
     pub name: String,
     pub description: Option<String>,
+    pub origin: PlaylistOrigin,
     pub created_on: DateTime,
     pub updated_on: DateTime,
 }

@@ -24,12 +24,20 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_one = "super::spotify_code::Entity")]
+    SpotifyCode,
     #[sea_orm(has_one = "super::spotify_token::Entity")]
     SpotifyToken,
     #[sea_orm(has_one = "super::deezer_token::Entity")]
     DeezerToken,
     #[sea_orm(has_many = "super::playlist::Entity")]
     Playlist,
+}
+
+impl Related<super::spotify_code::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::SpotifyCode.def()
+    }
 }
 
 impl Related<super::spotify_token::Entity> for Entity {

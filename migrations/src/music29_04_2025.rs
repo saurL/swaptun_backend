@@ -15,7 +15,7 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Music::Artist).string().not_null())
                     .col(ColumnDef::new(Music::Album).string().null())
                     .col(ColumnDef::new(Music::ReleaseDate).date().null())
-                    .col(ColumnDef::new(Music::Genre).string().not_null())
+                    .col(ColumnDef::new(Music::Genre).string().null())
                     .to_owned(),
             )
             .await

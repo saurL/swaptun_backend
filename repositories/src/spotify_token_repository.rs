@@ -23,7 +23,12 @@ impl SpotifyTokenRepository {
             .one(self.db.as_ref())
             .await
     }
-
+    pub async fn save(
+        &self,
+        token: SpotifyTokenActiveModel,
+    ) -> Result<SpotifyTokenActiveModel, DbErr> {
+        token.save(self.db.as_ref()).await
+    }
     pub async fn find_by_user_id(&self, user_id: i32) -> Result<Option<SpotifyTokenModel>, DbErr> {
         SpotifyTokenEntity::find()
             .filter(SpotifyTokenColumn::UserId.eq(user_id))

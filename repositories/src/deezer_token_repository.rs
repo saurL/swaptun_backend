@@ -14,6 +14,12 @@ impl DeezerTokenRepository {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self { db }
     }
+    pub async fn save(
+        &self,
+        token: DeezerTokenActiveModel,
+    ) -> Result<DeezerTokenActiveModel, DbErr> {
+        token.save(self.db.as_ref()).await
+    }
 
     pub async fn find_by_user_id(&self, user_id: i32) -> Result<Option<DeezerTokenModel>, DbErr> {
         DeezerTokenEntity::find()

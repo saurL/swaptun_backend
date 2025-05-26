@@ -1,5 +1,6 @@
 use crate::{CreateUserRequest, UserService};
 use std::sync::Arc;
+use swaptun_models::UserModel;
 use testcontainers_modules::{
     postgres,
     testcontainers::{ContainerAsync, runners::AsyncRunner},
@@ -10,12 +11,21 @@ use swaptun_migrations::{Migrator, MigratorTrait};
 pub struct TestDatabase {
     pub container: Arc<ContainerAsync<postgres::Postgres>>,
     db: DatabaseConnection,
+    user: UserModel,
 }
 
 impl TestDatabase {
     pub async fn new() -> Self {
-        let (db, container) = setup_db().await;
-        TestDatabase { container, db }
+        let (db, container, user) = setup_db().await;
+        TestDatabase {
+            container,
+            db,
+            user,
+        }
+    }
+
+    pub fn get_user(&self) -> UserModel {
+        self.user.clone()
     }
 
     pub fn get_db(&self) -> Arc<DatabaseConnection> {
@@ -38,7 +48,11 @@ pub async fn setup_container() -> Arc<ContainerAsync<postgres::Postgres>> {
     Arc::new(container)
 }
 
-pub async fn setup_db() -> (DatabaseConnection, Arc<ContainerAsync<postgres::Postgres>>) {
+pub async fn setup_db() -> (
+    DatabaseConnection,
+    Arc<ContainerAsync<postgres::Postgres>>,
+    UserModel,
+) {
     let container = setup_container().await;
     let host_ip = container.get_host().await.unwrap();
     let host_port = container.get_host_port_ipv4(5432).await.unwrap();
@@ -63,7 +77,7 @@ pub async fn setup_db() -> (DatabaseConnection, Arc<ContainerAsync<postgres::Pos
         last_name: "last_name".to_string(),
         email: "unique_user@gmail.com".to_string(),
     };
-    let _ = user_service.create_user(create_user_request).await;
+    let user = user_service.create_user(create_user_request).await.unwrap();
 
-    (db, container)
+    (db, container, user)
 }

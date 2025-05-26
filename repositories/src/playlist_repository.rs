@@ -1,9 +1,13 @@
 use std::sync::Arc;
 use swaptun_models::{
-    MusicEntity, MusicModel, PlaylistActiveModel, PlaylistEntity, PlaylistModel, UserModel,
+    MusicEntity, MusicModel, PlaylistActiveModel, PlaylistColumn, PlaylistEntity, PlaylistModel,
+    UserModel, playlist::PlaylistOrigin,
 };
 
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait, ModelTrait};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait,
+    ModelTrait, QueryFilter,
+};
 pub struct PlaylistRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -14,28 +18,38 @@ impl PlaylistRepository {
     }
 
     pub async fn find_by_id(&self, id: i32) -> Result<Option<PlaylistModel>, DbErr> {
-        PlaylistEntity::find_by_id(id).one(self.db.as_ref()).await
+        PlaylistEntity::find_by_id(id).one(&*self.db).await
     }
 
-    pub async fn create(&self, playlist: PlaylistActiveModel) -> Result<PlaylistModel, DbErr> {
-        playlist.insert(self.db.as_ref()).await
+    pub async fn find_by_user(&self, user: UserModel) -> Result<Vec<PlaylistModel>, DbErr> {
+        PlaylistEntity::find()
+            .filter(PlaylistColumn::UserId.eq(user.id))
+            .all(&*self.db)
+            .await
     }
 
-    pub async fn update(&self, playlist: PlaylistActiveModel) -> Result<PlaylistModel, DbErr> {
-        playlist.update(self.db.as_ref()).await
+    pub async fn find_by_user_and_origin(
+        &self,
+        user: UserModel,
+        origin: PlaylistOrigin,
+    ) -> Result<Vec<PlaylistModel>, DbErr> {
+        PlaylistEntity::find()
+            .filter(PlaylistColumn::UserId.eq(user.id))
+            .filter(PlaylistColumn::Origin.eq(origin))
+            .all(&*self.db)
+            .await
+    }
+
+    pub async fn create(&self, model: PlaylistActiveModel) -> Result<PlaylistModel, DbErr> {
+        model.insert(&*self.db).await
+    }
+
+    pub async fn update(&self, model: PlaylistActiveModel) -> Result<PlaylistModel, DbErr> {
+        model.update(&*self.db).await
     }
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
-        PlaylistEntity::delete_by_id(id)
-            .exec(self.db.as_ref())
-            .await
-    }
-
-    pub async fn find_by_user(&self, user_model: UserModel) -> Result<Vec<PlaylistModel>, DbErr> {
-        user_model
-            .find_related(PlaylistEntity)
-            .all(self.db.as_ref())
-            .await
+        PlaylistEntity::delete_by_id(id).exec(&*self.db).await
     }
 
     pub async fn get_music(&self, playist_model: PlaylistModel) -> Result<Vec<MusicModel>, DbErr> {

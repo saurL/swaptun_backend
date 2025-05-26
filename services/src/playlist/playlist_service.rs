@@ -2,8 +2,10 @@ use std::sync::Arc;
 
 use crate::CreatePlaylistRequest;
 use crate::DeletePlaylistRequest;
+use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
 use crate::error::AppError;
+use log::error;
 use sea_orm::DatabaseConnection;
 use sea_orm::DbErr;
 use sea_orm::DeleteResult;
@@ -47,25 +49,41 @@ impl PlaylistService {
     pub async fn get_user_playlist(
         &self,
         user_model: UserModel,
+        params: Option<GetPlaylistsParams>,
     ) -> Result<Vec<PlaylistModel>, DbErr> {
-        self.playlist_repository.find_by_user(user_model).await
+        match params {
+            Some(params) => {
+                if let Some(origin) = params.origin {
+                    self.playlist_repository
+                        .find_by_user_and_origin(user_model, origin)
+                        .await
+                } else {
+                    self.playlist_repository.find_by_user(user_model).await
+                }
+            }
+            None => self.playlist_repository.find_by_user(user_model).await,
+        }
     }
 
     pub async fn create(
         &self,
         request: CreatePlaylistRequest,
         user_id: i32,
-    ) -> Result<(), AppError> {
+    ) -> Result<PlaylistModel, AppError> {
         let model = PlaylistActiveModel {
             name: sea_orm::ActiveValue::Set(request.name),
             description: sea_orm::ActiveValue::Set(request.description),
             user_id: sea_orm::ActiveValue::Set(user_id),
+            origin: sea_orm::ActiveValue::Set(request.origin),
             ..Default::default()
         };
 
         match self._create(model).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(AppError::InternalServerError),
+            Ok(playlist) => Ok(playlist),
+            Err(e) => {
+                error!("Error creating playlist: {:?}", e);
+                Err(AppError::InternalServerError)
+            }
         }
     }
 
@@ -144,7 +162,7 @@ impl PlaylistService {
 
     pub async fn add_music(
         &self,
-        playlist: PlaylistModel,
+        playlist: &PlaylistModel,
         music: MusicModel,
     ) -> Result<(), AppError> {
         if let Some(_) = self
@@ -169,7 +187,7 @@ impl PlaylistService {
     }
     pub async fn remove_music(
         &self,
-        playlist: PlaylistModel,
+        playlist: &PlaylistModel,
         music: MusicModel,
     ) -> Result<(), AppError> {
         if let Some(_) = self

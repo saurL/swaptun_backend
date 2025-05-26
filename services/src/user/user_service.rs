@@ -66,7 +66,7 @@ impl UserService {
         self.user_repository.restore(id, now).await
     }
 
-    pub async fn create_user(&self, request: CreateUserRequest) -> Result<(), AppError> {
+    pub async fn create_user(&self, request: CreateUserRequest) -> Result<UserModel, AppError> {
         info!(
             "Attempting to create user with username: {}",
             request.username
@@ -103,7 +103,7 @@ impl UserService {
         let user = self.create(user_model).await?;
 
         info!("User created with ID: {}", user.id);
-        Ok(())
+        Ok(user)
     }
 
     pub async fn get_users(&self, request: GetUsersParams) -> Result<Vec<UserModel>, DbErr> {

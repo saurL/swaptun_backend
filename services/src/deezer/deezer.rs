@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
+use sea_orm::IntoActiveModel;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
 use swaptun_models::{DeezerTokenActiveModel, UserModel};
 use swaptun_repositories::deezer_token_repository::DeezerTokenRepository;
-
-use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 
 pub struct DeezerService {
     deezer_token_repository: DeezerTokenRepository,
@@ -22,17 +22,28 @@ impl DeezerService {
         &self,
         request: AddTokenRequest,
         user: UserModel,
-    ) -> Result<(), AppError> {
-        let model = DeezerTokenActiveModel {
-            user_id: Set(user.id),
-            token: Set(request.token),
-            ..Default::default()
-        };
-        self.deezer_token_repository
-            .create(model)
-            .await
-            .map(|_| ())
-            .map_err(AppError::from)
+    ) -> Result<DeezerTokenActiveModel, AppError> {
+        match self.get_token(user.clone()).await {
+            Ok(model) => {
+                let mut active_model = model.into_active_model();
+                active_model.token = Set(request.token);
+                self.deezer_token_repository
+                    .save(active_model.into())
+                    .await
+                    .map_err(AppError::from)
+            }
+            Err(_) => {
+                let model = DeezerTokenActiveModel {
+                    user_id: Set(user.id),
+                    token: Set(request.token),
+                    ..Default::default()
+                };
+                self.deezer_token_repository
+                    .save(model)
+                    .await
+                    .map_err(AppError::from)
+            }
+        }
     }
 
     pub async fn get_user_token(

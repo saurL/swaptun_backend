@@ -4,6 +4,7 @@ use sea_orm::DbConn;
 use swaptun_services::auth::jwt::{JwtMiddleware, RoleGuard};
 
 mod auth;
+mod playlist;
 mod spotify;
 mod users;
 
@@ -24,7 +25,8 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                                 .wrap(RoleGuard::user())
                                 .configure(|c| users::configure_protected(c)),
                         )
-                        .service(web::scope("/spotify").configure(|c| spotify::configure(c))),
+                        .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
+                        .service(web::scope("/playlists").configure(|c| playlist::configure(c))),
                 ),
         );
 }
