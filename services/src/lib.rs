@@ -35,3 +35,4 @@ pub use spotify::*;
 pub mod dto;
 pub mod validators;
 pub use dto::*;
+pub use swaptun_models::*;
