@@ -16,7 +16,6 @@ full = [
   "lazy_static",
   "swaptun-migrations",
   "swaptun-repositories",
-  "swaptun-models",
   "chrono",
   "actix-web"
 ]
@@ -47,7 +46,7 @@ regex = { version = "1.11.1" }
 testcontainers-modules = { version = "0.11.6", features = ["blocking", "postgres"], optional = true }
 swaptun-migrations = { path = "../migrations", optional = true }
 swaptun-repositories = { path = "../repositories", optional = true }
-swaptun-models = { path = "../models", optional = true }
+swaptun-models = { path = "../models" }
 lazy_static = { version = "1.5.0", optional = true }
 rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli","env-file"] }
 
