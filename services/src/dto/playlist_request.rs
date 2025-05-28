@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use swaptun_models::playlist::PlaylistOrigin;
+use swaptun_models::{PlaylistModel, PlaylistOrigin};
 use validator::Validate;
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -24,4 +24,9 @@ pub struct DeletePlaylistRequest {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct GetPlaylistsParams {
     pub origin: Option<PlaylistOrigin>,
+}
+
+#[derive(Deserialize, Serialize, Validate)]
+pub struct getPlaylistResponse {
+    pub vec: Vec<PlaylistModel>,
 }

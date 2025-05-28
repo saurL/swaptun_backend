@@ -5,6 +5,7 @@ use crate::DeletePlaylistRequest;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
 use crate::error::AppError;
+use crate::getPlaylistResponse;
 use log::error;
 use sea_orm::DatabaseConnection;
 use sea_orm::DbErr;
@@ -50,7 +51,7 @@ impl PlaylistService {
         &self,
         user_model: UserModel,
         params: Option<GetPlaylistsParams>,
-    ) -> Result<Vec<PlaylistModel>, DbErr> {
+    ) -> Result<getPlaylistResponse, DbErr> {
         match params {
             Some(params) => {
                 if let Some(origin) = params.origin {
@@ -63,6 +64,7 @@ impl PlaylistService {
             }
             None => self.playlist_repository.find_by_user(user_model).await,
         }
+        .map(|playlists| getPlaylistResponse { vec: playlists })
     }
 
     pub async fn create(
