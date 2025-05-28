@@ -19,7 +19,7 @@ async fn test_get_playlists_by_origin() {
         .get_user_playlist(user.clone(), None)
         .await
         .unwrap();
-    assert_eq!(all_playlists.len(), 3); // Should have 3 playlists total
+    assert_eq!(all_playlists.vec.len(), 3); // Should have 3 playlists total
 
     // Test getting Spotify playlists
     let spotify_params = GetPlaylistsParams {
@@ -29,9 +29,10 @@ async fn test_get_playlists_by_origin() {
         .get_user_playlist(user.clone(), Some(spotify_params))
         .await
         .unwrap();
-    assert_eq!(spotify_playlists.len(), 2); // Should have 2 Spotify playlists
+    assert_eq!(spotify_playlists.vec.len(), 2); // Should have 2 Spotify playlists
     assert!(
         spotify_playlists
+            .vec
             .iter()
             .all(|p| p.origin == PlaylistOrigin::Spotify)
     );
@@ -44,9 +45,10 @@ async fn test_get_playlists_by_origin() {
         .get_user_playlist(user.clone(), Some(deezer_params))
         .await
         .unwrap();
-    assert_eq!(deezer_playlists.len(), 1); // Should have 1 Deezer playlist
+    assert_eq!(deezer_playlists.vec.len(), 1); // Should have 1 Deezer playlist
     assert!(
         deezer_playlists
+            .vec
             .iter()
             .all(|p| p.origin == PlaylistOrigin::Deezer)
     );
