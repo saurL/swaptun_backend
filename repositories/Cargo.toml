@@ -14,3 +14,4 @@ sea-orm = { version = "1.1.10", features = [
   "macros",
 ] }
 swaptun-models = { path = "../models" }
+log = { version = "0.4.27" }

@@ -4102,6 +4102,7 @@ name = "swaptun-repositories"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "log",
  "sea-orm",
  "swaptun-models",
 ]

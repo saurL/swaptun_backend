@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use sea_orm::entity::prelude::*;
 
-#[derive(EnumIter, DeriveActiveEnum, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(EnumIter, DeriveActiveEnum, Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "playlist_origin")]
 pub enum PlaylistOrigin {
     #[sea_orm(string_value = "Spotify")]

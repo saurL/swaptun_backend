@@ -6,11 +6,12 @@ use swaptun_models::{
 
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait,
-    ModelTrait, QueryFilter,
+    ModelTrait, QueryFilter, metric::Info, sea_query::ExprTrait,
 };
 pub struct PlaylistRepository {
     db: Arc<DatabaseConnection>,
 }
+use log::info;
 
 impl PlaylistRepository {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
@@ -22,10 +23,7 @@ impl PlaylistRepository {
     }
 
     pub async fn find_by_user(&self, user: UserModel) -> Result<Vec<PlaylistModel>, DbErr> {
-        PlaylistEntity::find()
-            .filter(PlaylistColumn::UserId.eq(user.id))
-            .all(&*self.db)
-            .await
+        user.find_related(PlaylistEntity).all(&*self.db).await
     }
 
     pub async fn find_by_user_and_origin(
@@ -33,8 +31,7 @@ impl PlaylistRepository {
         user: UserModel,
         origin: PlaylistOrigin,
     ) -> Result<Vec<PlaylistModel>, DbErr> {
-        PlaylistEntity::find()
-            .filter(PlaylistColumn::UserId.eq(user.id))
+        user.find_related(PlaylistEntity)
             .filter(PlaylistColumn::Origin.eq(origin))
             .all(&*self.db)
             .await
