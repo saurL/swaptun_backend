@@ -1,4 +1,4 @@
-use sea_orm::{ActiveEnum, DbBackend, Schema, sea_query::extension::postgres::Type};
+use sea_orm::{sea_query::extension::postgres::Type, ActiveEnum, DbBackend, Schema};
 use sea_orm_migration::prelude::*;
 use swaptun_models::playlist::PlaylistOrigin;
 
