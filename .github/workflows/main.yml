@@ -9,19 +9,20 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
- name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
+
+
+    steps:
+    - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
     - name: Run cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --workspace
-        
-    steps:
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
     - name: Check out repository
       uses: actions/checkout@v4
 
