@@ -46,6 +46,7 @@ COPY .env /app/
 RUN useradd -m appuser
 USER appuser
 
+# Exposer le port de l'API
 EXPOSE 8000
 
 CMD ["/app/swaptun-backend"]
