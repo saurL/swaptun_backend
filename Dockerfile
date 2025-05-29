@@ -1,5 +1,5 @@
 # Étape 1 : Build de l'application Rust
-FROM rust:1.78-slim as builder
+FROM rust:1.81-slim as builder
 
 WORKDIR /app
 
