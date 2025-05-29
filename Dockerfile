@@ -35,7 +35,7 @@ WORKDIR /app
 
 # Installer les librairies nécessaires à l'exécution
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates libssl-dev && \
+    apt-get install -y --no-install-recommends ca-certificates libssl-dev curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Copier le binaire compilé et le fichier .env
@@ -48,5 +48,8 @@ USER appuser
 
 # Exposer le port de l'API
 EXPOSE 8000
+
+# Vérification de santé
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8000/health || exit 1
 
 CMD ["/app/swaptun-backend"]
