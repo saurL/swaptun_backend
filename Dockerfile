@@ -20,7 +20,7 @@ RUN echo "fn main() {}" > api/src/main.rs
 RUN echo "fn main() {}" > services/src/main.rs
 RUN echo "fn main() {}" > models/src/main.rs
 RUN echo "fn main() {}" > repositories/src/main.rs
-RUN cargo build --release
+RUN cargo build --release || true
 
 # Copier le code source réel
 COPY . .
