@@ -6,6 +6,11 @@ use crate::DeletePlaylistRequest;
 use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
+<<<<<<< HEAD
+=======
+use crate::error::AppError;
+use crate::GetPlaylistResponse;
+>>>>>>> cec52d8 (api musicbrainz install + test)
 use log::error;
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
 use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
@@ -42,6 +47,7 @@ impl PlaylistService {
 
     pub async fn get_user_playlist(
         &self,
+<<<<<<< HEAD
         user: UserModel,
         params: GetPlaylistsParams,
     ) -> Result<GetPlaylistResponse, DbErr> {
@@ -57,8 +63,26 @@ impl PlaylistService {
             Err(e) => {
                 error!("Error fetching user playlists: {:?}", e);
                 Err(e)
+=======
+        user_model: UserModel,
+        params: Option<GetPlaylistsParams>,
+    ) -> Result<GetPlaylistResponse, DbErr> {
+        match params {
+            Some(params) => {
+                if let Some(origin) = params.origin {
+                    self.playlist_repository
+                        .find_by_user_and_origin(user_model, origin)
+                        .await
+                } else {
+                    self.playlist_repository.find_by_user(user_model).await
+                }
+>>>>>>> cec52d8 (api musicbrainz install + test)
             }
         }
+<<<<<<< HEAD
+=======
+        .map(|playlists| GetPlaylistResponse { vec: playlists })
+>>>>>>> cec52d8 (api musicbrainz install + test)
     }
 
     pub async fn create(
