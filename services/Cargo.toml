@@ -23,6 +23,7 @@ full = [
 
 
 [dependencies]
+ureq = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0.140" }
 validator = { version = "0.20.0", features = ["derive"] }
