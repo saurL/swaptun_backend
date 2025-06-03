@@ -26,7 +26,7 @@ pub struct GetPlaylistsParams {
     pub origin: Option<PlaylistOrigin>,
 }
 
-#[derive(Deserialize, Serialize, Validate)]
-pub struct getPlaylistResponse {
+#[derive(Deserialize, Serialize, Validate, Clone)]
+pub struct GetPlaylistResponse {
     pub vec: Vec<PlaylistModel>,
 }
