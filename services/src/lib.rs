@@ -4,6 +4,7 @@ pub mod deezer;
 pub mod error;
 #[cfg(feature = "full")]
 pub mod music;
+pub mod musicbrainz;
 #[cfg(feature = "full")]
 pub mod playlist;
 #[cfg(feature = "full")]
@@ -19,6 +20,9 @@ pub use test::*;
 pub use deezer::*;
 #[cfg(feature = "full")]
 pub use music::*;
+
+#[cfg(feature = "full")]
+pub use musicbrainz::*;
 
 #[cfg(feature = "full")]
 pub use playlist::*;
