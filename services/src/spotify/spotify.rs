@@ -273,7 +273,7 @@ impl SpotifyService {
             name: playlist.name,
             origin: PlaylistOrigin::Spotify,
             description: None,
-            spotify_id: playlist.id.to_string(),
+            origin_id: playlist.id.to_string(),
         };
         let playlist = self.playlist_service.create_or_get(request, &user).await?;
         let mut local_tracks = self.music_service.find_by_playlist(&playlist).await?;

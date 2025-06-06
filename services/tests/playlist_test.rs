@@ -58,13 +58,13 @@ async fn create_test_playlists(playlist_service: &PlaylistService, user_id: i32)
         name: "Spotify Playlist 1".to_string(),
         description: Some("My first Spotify playlist".to_string()),
         origin: PlaylistOrigin::Spotify,
-        spotify_id: "aae".into(),
+        origin_id: "aae".into(),
     };
     let spotify_playlist2 = CreatePlaylistRequest {
         name: "Spotify Playlist 2".to_string(),
         description: Some("My second Spotify playlist".to_string()),
         origin: PlaylistOrigin::Spotify,
-        spotify_id: "aae".into(),
+        origin_id: "aae".into(),
     };
 
     // Create Deezer playlist
@@ -72,7 +72,7 @@ async fn create_test_playlists(playlist_service: &PlaylistService, user_id: i32)
         name: "Deezer Playlist".to_string(),
         description: Some("My Deezer playlist".to_string()),
         origin: PlaylistOrigin::Deezer,
-        spotify_id: "aae".into(),
+        origin_id: "aae".into(),
     };
 
     // Save playlists

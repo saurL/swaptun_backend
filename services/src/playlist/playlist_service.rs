@@ -7,16 +7,9 @@ use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
 use log::error;
-use sea_orm::DatabaseConnection;
-use sea_orm::DbErr;
-use sea_orm::DeleteResult;
-use sea_orm::IntoActiveModel;
-use swaptun_models::music_playlist;
-use swaptun_models::MusicModel;
-use swaptun_models::PlaylistActiveModel;
-use swaptun_models::{PlaylistModel, UserModel};
-use swaptun_repositories::MusicPlaylistRepository;
-use swaptun_repositories::PlaylistRepository;
+use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
+use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
+use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 
 pub struct PlaylistService {
     pub playlist_repository: PlaylistRepository,
@@ -78,6 +71,7 @@ impl PlaylistService {
             description: sea_orm::ActiveValue::Set(request.description),
             user_id: sea_orm::ActiveValue::Set(user_id),
             origin: sea_orm::ActiveValue::Set(request.origin),
+            origin_id: sea_orm::ActiveValue::Set(request.origin_id),
             ..Default::default()
         };
 
@@ -99,7 +93,7 @@ impl PlaylistService {
             .find_by_user(&user, None)
             .await?
             .into_iter()
-            .find(|p| p.spotify_id == request.spotify_id)
+            .find(|p| p.origin_id == request.origin_id)
         {
             return Ok(playlist);
         }
