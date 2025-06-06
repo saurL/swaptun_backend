@@ -21,7 +21,7 @@ pub struct Model {
     pub origin: PlaylistOrigin,
     pub created_on: DateTime,
     pub updated_on: DateTime,
-    pub spotify_id: String,
+    pub origin_id: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

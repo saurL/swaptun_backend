@@ -6,6 +6,7 @@ mod music29_04_2025;
 mod music_playlist;
 mod playlist29_04_2025;
 mod playlist_origin_29_04_2025;
+mod playlist_origin_id_29_04_2025;
 mod spotify_code_29_04_2025;
 mod spotify_token_29_04_2025;
 
@@ -23,6 +24,7 @@ impl MigratorTrait for Migrator {
             Box::new(music_playlist::Migration),
             Box::new(spotify_token_29_04_2025::Migration),
             Box::new(playlist_origin_29_04_2025::Migration),
+            Box::new(playlist_origin_id_29_04_2025::Migration),
         ]
     }
 }
