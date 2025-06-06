@@ -30,18 +30,18 @@ impl MusicPlaylistRepository {
             .await
     }
 
-    pub async fn delete_by_relation(
+    pub async fn delete_relation(
         &self,
         playlist: &PlaylistModel,
-        music: MusicModel,
+        music: &MusicModel,
     ) -> Result<DeleteResult, DbErr> {
         MusicPlaylistEntity::delete_many()
             .filter(
                 MusicPlaylistColumn::PlaylistId.eq(playlist.id).and(
-                    MusicPlaylistColumn::MusicAlbum.eq(music.album).and(
+                    MusicPlaylistColumn::MusicAlbum.eq(music.album.clone()).and(
                         MusicPlaylistColumn::MusicArtist
-                            .eq(music.artist)
-                            .and(MusicPlaylistColumn::MusicTitle.eq(music.title)),
+                            .eq(music.artist.clone())
+                            .and(MusicPlaylistColumn::MusicTitle.eq(music.title.clone())),
                     ),
                 ),
             )
@@ -65,7 +65,7 @@ impl MusicPlaylistRepository {
             .await
     }
 
-    pub async fn find_by_relation(
+    pub async fn find_relation(
         &self,
         playlist_id: PlaylistModel,
         music_id: MusicModel,

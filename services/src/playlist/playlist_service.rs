@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
+use crate::error::AppError;
 use crate::CreatePlaylistRequest;
 use crate::DeletePlaylistRequest;
+use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
-use crate::error::AppError;
-use crate::getPlaylistResponse;
 use log::error;
 use sea_orm::DatabaseConnection;
 use sea_orm::DbErr;
 use sea_orm::DeleteResult;
 use sea_orm::IntoActiveModel;
+use swaptun_models::music_playlist;
 use swaptun_models::MusicModel;
 use swaptun_models::PlaylistActiveModel;
-use swaptun_models::music_playlist;
 use swaptun_models::{PlaylistModel, UserModel};
 use swaptun_repositories::MusicPlaylistRepository;
 use swaptun_repositories::PlaylistRepository;
@@ -49,22 +49,23 @@ impl PlaylistService {
 
     pub async fn get_user_playlist(
         &self,
-        user_model: UserModel,
-        params: Option<GetPlaylistsParams>,
-    ) -> Result<getPlaylistResponse, DbErr> {
-        match params {
-            Some(params) => {
-                if let Some(origin) = params.origin {
-                    self.playlist_repository
-                        .find_by_user_and_origin(user_model, origin)
-                        .await
-                } else {
-                    self.playlist_repository.find_by_user(user_model).await
-                }
+        user: UserModel,
+        params: GetPlaylistsParams,
+    ) -> Result<GetPlaylistResponse, DbErr> {
+        match self
+            .playlist_repository
+            .find_by_user(&user, params.origin)
+            .await
+        {
+            Ok(playlists) => {
+                let response = GetPlaylistResponse { vec: playlists };
+                Ok(response)
             }
-            None => self.playlist_repository.find_by_user(user_model).await,
+            Err(e) => {
+                error!("Error fetching user playlists: {:?}", e);
+                Err(e)
+            }
         }
-        .map(|playlists| getPlaylistResponse { vec: playlists })
     }
 
     pub async fn create(
@@ -87,6 +88,23 @@ impl PlaylistService {
                 Err(AppError::InternalServerError)
             }
         }
+    }
+    pub async fn create_or_get(
+        &self,
+        request: CreatePlaylistRequest,
+        user: &UserModel,
+    ) -> Result<PlaylistModel, AppError> {
+        if let Some(playlist) = self
+            .playlist_repository
+            .find_by_user(&user, None)
+            .await?
+            .into_iter()
+            .find(|p| p.spotify_id == request.spotify_id)
+        {
+            return Ok(playlist);
+        }
+
+        self.create(request, user.id).await
     }
 
     pub async fn get_playlist(&self, id: i32) -> Result<PlaylistModel, AppError> {
@@ -169,7 +187,7 @@ impl PlaylistService {
     ) -> Result<(), AppError> {
         if let Some(_) = self
             .music_playlist_repository
-            .find_by_relation(playlist.clone(), music.clone())
+            .find_relation(playlist.clone(), music.clone())
             .await?
         {
             return Ok(());
@@ -190,16 +208,16 @@ impl PlaylistService {
     pub async fn remove_music(
         &self,
         playlist: &PlaylistModel,
-        music: MusicModel,
+        music: &MusicModel,
     ) -> Result<(), AppError> {
         if let Some(_) = self
             .music_playlist_repository
-            .find_by_relation(playlist.clone(), music.clone())
+            .find_relation(playlist.clone(), music.clone())
             .await?
         {
             match self
                 .music_playlist_repository
-                .delete_by_relation(playlist, music)
+                .delete_relation(playlist, music)
                 .await
             {
                 Ok(_) => Ok(()),
@@ -207,8 +225,8 @@ impl PlaylistService {
             }
         } else {
             Err(AppError::NotFound(format!(
-                "Music not found in playlist with id {}",
-                playlist.id
+                "Music {} not found in playlist with id {}",
+                music.title, playlist.id
             )))
         }
     }

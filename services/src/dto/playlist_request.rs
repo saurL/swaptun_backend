@@ -7,6 +7,7 @@ pub struct CreatePlaylistRequest {
     pub name: String,
     pub description: Option<String>,
     pub origin: PlaylistOrigin,
+    pub spotify_id: String,
 }
 
 #[derive(Deserialize, Serialize, Validate)]

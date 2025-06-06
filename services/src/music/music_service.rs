@@ -53,7 +53,7 @@ impl MusicService {
 
     pub async fn find_by_playlist(
         &self,
-        playlist_model: PlaylistModel,
+        playlist_model: &PlaylistModel,
     ) -> Result<Vec<MusicModel>, DbErr> {
         self.music_repository.find_by_playlist(playlist_model).await
     }

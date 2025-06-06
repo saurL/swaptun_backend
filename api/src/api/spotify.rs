@@ -1,4 +1,4 @@
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use log::info;
 use sea_orm::DbConn;
 
@@ -8,7 +8,7 @@ use swaptun_services::{AddTokenRequest, GetAuthorizationUrlRequest, SpotifyServi
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/authorization-url", web::get().to(get_authorization_url))
         .service(web::resource("/token").post(set_token))
-        .route("/test", web::get().to(get_user_playlists));
+        .route("/playlist", web::post().to(post_user_playlists));
 }
 
 async fn get_authorization_url(
@@ -38,7 +38,7 @@ async fn set_token(
     Ok(HttpResponse::Ok().json(true))
 }
 
-async fn get_user_playlists(
+async fn post_user_playlists(
     db: web::Data<DbConn>,
     http_req: HttpRequest,
 ) -> Result<HttpResponse, AppError> {

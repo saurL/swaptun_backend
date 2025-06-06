@@ -1,17 +1,16 @@
 use std::sync::Arc;
 use swaptun_models::{
-    MusicEntity, MusicModel, PlaylistActiveModel, PlaylistColumn, PlaylistEntity, PlaylistModel,
-    UserModel, playlist::PlaylistOrigin,
+    playlist::PlaylistOrigin, MusicEntity, MusicModel, PlaylistActiveModel, PlaylistColumn,
+    PlaylistEntity, PlaylistModel, UserModel,
 };
 
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait,
-    ModelTrait, QueryFilter, metric::Info, sea_query::ExprTrait,
+    ModelTrait, QueryFilter,
 };
 pub struct PlaylistRepository {
     db: Arc<DatabaseConnection>,
 }
-use log::info;
 
 impl PlaylistRepository {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
@@ -22,19 +21,20 @@ impl PlaylistRepository {
         PlaylistEntity::find_by_id(id).one(&*self.db).await
     }
 
-    pub async fn find_by_user(&self, user: UserModel) -> Result<Vec<PlaylistModel>, DbErr> {
-        user.find_related(PlaylistEntity).all(&*self.db).await
-    }
-
-    pub async fn find_by_user_and_origin(
+    pub async fn find_by_user(
         &self,
-        user: UserModel,
-        origin: PlaylistOrigin,
+        user: &UserModel,
+        origin: Option<PlaylistOrigin>,
     ) -> Result<Vec<PlaylistModel>, DbErr> {
-        user.find_related(PlaylistEntity)
-            .filter(PlaylistColumn::Origin.eq(origin))
-            .all(&*self.db)
-            .await
+        match origin {
+            Some(origin) => {
+                user.find_related(PlaylistEntity)
+                    .filter(PlaylistColumn::Origin.eq(origin))
+                    .all(&*self.db)
+                    .await
+            }
+            None => user.find_related(PlaylistEntity).all(&*self.db).await,
+        }
     }
 
     pub async fn create(&self, model: PlaylistActiveModel) -> Result<PlaylistModel, DbErr> {

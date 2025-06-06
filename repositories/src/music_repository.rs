@@ -47,7 +47,7 @@ impl MusicRepository {
 
     pub async fn find_by_playlist(
         &self,
-        playlist_model: PlaylistModel,
+        playlist_model: &PlaylistModel,
     ) -> Result<Vec<MusicModel>, DbErr> {
         playlist_model
             .find_related(MusicEntity)

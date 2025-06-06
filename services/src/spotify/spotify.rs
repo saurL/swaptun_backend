@@ -3,8 +3,8 @@ use crate::error::AppError;
 use crate::{
     CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse,
 };
-use futures::StreamExt;
 use futures::future::join_all;
+use futures::StreamExt;
 use log::{error, info};
 use rspotify::model::{PlayableItem, SimplifiedPlaylist};
 use rspotify::prelude::{BaseClient, OAuthClient};
@@ -22,7 +22,7 @@ use swaptun_repositories::{
 };
 
 use chrono::{NaiveDate, Utc};
-use rspotify::{AuthCodeSpotify, Credentials, OAuth, Token, scopes};
+use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth, Token};
 
 pub struct SpotifyService {
     spotify_code_repository: SpotifyCodeRepository,
@@ -268,20 +268,34 @@ impl SpotifyService {
         user: &UserModel,
     ) -> Result<(), AppError> {
         let spotify = self.get_spotify_client_connected(&user).await?;
-        let mut tracks = spotify.playlist_items(playlist.id, None, None);
+        let mut tracks = spotify.playlist_items(playlist.id.clone(), None, None);
         let request = CreatePlaylistRequest {
             name: playlist.name,
             origin: PlaylistOrigin::Spotify,
             description: None,
+            spotify_id: playlist.id.to_string(),
         };
-        let playlist = self.playlist_service.create(request, user.id).await?;
+        let playlist = self.playlist_service.create_or_get(request, &user).await?;
+        let mut local_tracks = self.music_service.find_by_playlist(&playlist).await?;
         while let Some(track) = tracks.next().await {
             if let Ok(track) = track {
                 if let Some(track) = track.track {
                     match track {
                         PlayableItem::Track(track) => {
-                            // a remplacer par l'api pour récupérer les genres
                             let genre: Option<String> = None;
+                            if let Some(pos) = local_tracks.iter().position(|local_track| {
+                                local_track.title == track.name
+                                    && local_track.artist
+                                        == track
+                                            .artists
+                                            .first()
+                                            .map(|a| a.name.clone())
+                                            .unwrap_or_default()
+                                    && local_track.album == track.album.name
+                            }) {
+                                // Remove the matching local_track from the vector
+                                let _ = local_tracks.remove(pos);
+                            }
                             let create_music_request = CreateMusicRequest {
                                 title: track.name,
                                 release_date: track
@@ -302,10 +316,16 @@ impl SpotifyService {
                             let music = self.music_service.create(create_music_request).await?;
                             self.playlist_service.add_music(&playlist, music).await?;
                         }
+
                         _ => {}
                     }
                 }
             }
+        }
+        for local_track in local_tracks {
+            self.playlist_service
+                .remove_music(&playlist, &local_track)
+                .await?;
         }
         Ok(())
     }

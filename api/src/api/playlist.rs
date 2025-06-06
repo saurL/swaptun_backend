@@ -1,4 +1,4 @@
-use actix_web::{HttpMessage, HttpRequest, HttpResponse, web};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
 use sea_orm::DbConn;
 
 use swaptun_services::auth::Claims;
@@ -43,7 +43,7 @@ async fn get_user_playlists(
 
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
     let playlists = playlist_service
-        .get_user_playlist(user, Some(query.into_inner()))
+        .get_user_playlist(user, query.into_inner())
         .await?;
 
     Ok(HttpResponse::Ok().json(playlists))
@@ -173,7 +173,7 @@ async fn remove_music_from_playlist(
         .await?
         .ok_or_else(|| AppError::NotFound("Music not found".to_string()))?;
 
-    playlist_service.remove_music(&playlist, music).await?;
+    playlist_service.remove_music(&playlist, &music).await?;
 
     Ok(HttpResponse::NoContent().finish())
 }
