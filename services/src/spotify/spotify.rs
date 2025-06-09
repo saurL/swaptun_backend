@@ -3,6 +3,7 @@ use crate::error::AppError;
 use crate::{
     CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse,
 };
+use crate::musicbrainz::get_track_metadata;
 use futures::StreamExt;
 use futures::future::join_all;
 use log::{error, info};
@@ -280,10 +281,24 @@ impl SpotifyService {
                 if let Some(track) = track.track {
                     match track {
                         PlayableItem::Track(track) => {
-                            // a remplacer par l'api pour récupérer les genres
-                            let genre: Option<String> = None;
+                            
+                            let artist_name = track.artists.first().map(|a| a.name.clone()).unwrap_or_default();
+                            let track_title = track.name.clone();
+
+                            let genre = match get_track_metadata(&track_title, &artist_name).await {
+                                Ok(Some(metadata)) => metadata.genre,
+                                Ok(None) => {
+                                    info!("Pas de genre trouvé pour {} - {}", artist_name, track_title);
+                                    None
+                                },
+                                Err(e) => {
+                                    error!("Erreur lors de la récupération du genre via MusicBrainz: {:?}", e);
+                                    None
+                                }
+                            };
+
                             let create_music_request = CreateMusicRequest {
-                                title: track.name,
+                                title: track_title,
                                 release_date: track
                                     .album
                                     .release_date
@@ -291,11 +306,7 @@ impl SpotifyService {
                                     .parse::<NaiveDate>()
                                     .unwrap_or_default(),
                                 genre,
-                                artist: track
-                                    .artists
-                                    .first()
-                                    .map(|a| a.name.clone())
-                                    .unwrap_or_default(),
+                                artist: artist_name,
                                 album: track.album.name,
                                 description: None,
                             };

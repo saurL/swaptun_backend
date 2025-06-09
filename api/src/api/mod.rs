@@ -13,7 +13,6 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
     let db_data = web::Data::new(db);
 
     cfg.app_data(db_data.clone())
-        .service(web::scope("/test").configure(musicbrainz::configure))
         .route("/health", web::get().to(health_check))
         .service(
             web::scope("/api")
@@ -28,7 +27,8 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                                 .configure(|c| users::configure_protected(c)),
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
-                        .service(web::scope("/playlists").configure(|c| playlist::configure(c))),
+                        .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
+                        .service(web::scope("/musicbrainz").configure(musicbrainz::configure)),
                 ),
         );
 }
