@@ -14,7 +14,6 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
     let db_data = web::Data::new(db);
 
     cfg.app_data(db_data.clone())
-        .service(web::scope("/test").configure(musicbrainz::configure))
         .route("/health", web::get().to(health_check))
         .service(
             web::scope("/api")

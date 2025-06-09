@@ -3,6 +3,11 @@ use crate::error::AppError;
 use crate::{
     CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse,
 };
+<<<<<<< HEAD
+=======
+use crate::musicbrainz::get_track_metadata;
+use futures::StreamExt;
+>>>>>>> 4c855a5 (implement musicbrainz dans spotify)
 use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
@@ -282,20 +287,22 @@ impl SpotifyService {
                 if let Some(track) = track.track {
                     match track {
                         PlayableItem::Track(track) => {
-                            let genre: Option<String> = None;
-                            if let Some(pos) = local_tracks.iter().position(|local_track| {
-                                local_track.title == track.name
-                                    && local_track.artist
-                                        == track
-                                            .artists
-                                            .first()
-                                            .map(|a| a.name.clone())
-                                            .unwrap_or_default()
-                                    && local_track.album == track.album.name
-                            }) {
-                                // Remove the matching local_track from the vector
-                                let _ = local_tracks.remove(pos);
-                            }
+                            
+                            let artist_name = track.artists.first().map(|a| a.name.clone()).unwrap_or_default();
+                            let track_title = track.name.clone();
+
+                            let genre = match get_track_metadata(&track_title, &artist_name).await {
+                                Ok(Some(metadata)) => metadata.genre,
+                                Ok(None) => {
+                                    info!("Pas de genre trouvé pour {} - {}", artist_name, track_title);
+                                    None
+                                },
+                                Err(e) => {
+                                    error!("Erreur lors de la récupération du genre via MusicBrainz: {:?}", e);
+                                    None
+                                }
+                            };
+
                             let create_music_request = CreateMusicRequest {
                                 title: track_title,
                                 release_date: track
