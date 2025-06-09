@@ -297,7 +297,7 @@ impl SpotifyService {
                                 let _ = local_tracks.remove(pos);
                             }
                             let create_music_request = CreateMusicRequest {
-                                title: track.name,
+                                title: track_title,
                                 release_date: track
                                     .album
                                     .release_date
@@ -305,11 +305,7 @@ impl SpotifyService {
                                     .parse::<NaiveDate>()
                                     .unwrap_or_default(),
                                 genre,
-                                artist: track
-                                    .artists
-                                    .first()
-                                    .map(|a| a.name.clone())
-                                    .unwrap_or_default(),
+                                artist: artist_name,
                                 album: track.album.name,
                                 description: None,
                             };

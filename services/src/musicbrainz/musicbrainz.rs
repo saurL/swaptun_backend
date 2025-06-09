@@ -63,3 +63,13 @@ impl MusicBrainzService {
         })
     }
 }
+
+pub async fn get_track_metadata(title: &str, artist: &str) -> Result<Option<TrackInfo>, AppError> {
+    let service = MusicBrainzService::new();
+
+    match service.search_track(title, artist) {
+        Ok(track_info) => Ok(Some(track_info)),
+        Err(AppError::InternalServerError) => Ok(None), // Pas trouvé
+        Err(e) => Err(e),
+    }
+}
