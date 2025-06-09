@@ -3,6 +3,11 @@ use crate::error::AppError;
 use crate::{
     get_track_metadata, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse
 };
+<<<<<<< HEAD
+=======
+use crate::musicbrainz::get_track_metadata;
+use futures::StreamExt;
+>>>>>>> 4c855a5 (implement musicbrainz dans spotify)
 use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
