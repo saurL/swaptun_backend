@@ -5,6 +5,7 @@ pub mod playlist;
 pub mod spotify_code;
 pub mod spotify_token;
 pub mod user;
+pub mod user_info;
 pub use deezer_token::{
     ActiveModel as DeezerTokenActiveModel, Column as DeezerTokenColumn,
     Entity as DeezerTokenEntity, Model as DeezerTokenModel,
@@ -31,4 +32,8 @@ pub use spotify_token::{
 };
 pub use user::{
     ActiveModel as UserActiveModel, Column as UserColumn, Entity as UserEntity, Model as UserModel,
+};
+pub use user::{
+    ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
+    Model as UserInfoModel,
 };

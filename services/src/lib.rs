@@ -14,6 +14,8 @@ pub mod test;
 #[cfg(feature = "full")]
 pub mod user;
 #[cfg(feature = "full")]
+pub mod user_info;
+#[cfg(feature = "full")]
 pub use test::*;
 
 #[cfg(feature = "full")]
@@ -32,9 +34,6 @@ pub use spotify::*;
 
 #[cfg(feature = "full")]
 pub use user::*;
-
-#[cfg(feature = "full")]
-pub use spotify::*;
 
 pub mod dto;
 pub mod validators;

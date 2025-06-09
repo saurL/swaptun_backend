@@ -8,6 +8,7 @@ mod playlist;
 mod spotify;
 mod users;
 mod musicbrainz;
+mod user_info;
 
 pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
     let db_data = web::Data::new(db);
@@ -28,7 +29,8 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
                         .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
-                        .service(web::scope("/musicbrainz").configure(musicbrainz::configure)),
+                        .service(web::scope("/musicbrainz").configure(musicbrainz::configure))
+                        .service(web::scope("/user_info").configure(|c| user_info::configure(c))),
                 ),
         );
 }
