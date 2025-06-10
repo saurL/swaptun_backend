@@ -1,13 +1,8 @@
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
 use crate::{
-    CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse,
+    get_track_metadata, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse
 };
-<<<<<<< HEAD
-=======
-use crate::musicbrainz::get_track_metadata;
-use futures::StreamExt;
->>>>>>> 4c855a5 (implement musicbrainz dans spotify)
 use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
@@ -214,7 +209,7 @@ impl SpotifyService {
         // ```
         let oauth: OAuth = OAuth {
             redirect_uri: format!("http://127.0.0.1:{}", port),
-            scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private"),
+            scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private user-read-email"),
             ..Default::default()
         };
 
@@ -241,7 +236,7 @@ impl SpotifyService {
                     if let Ok(playlist) = playlist_result {
                         playlist_models.push(playlist.clone());
                         // Créer la future d'importation sans l'attendre
-                        let import_future = self.import_playlist(playlist, &user);
+                        let import_future = self.import_playlist(playlist, &user,&spotify);
                         import_futures.push(import_future);
                     }
                 }
@@ -271,8 +266,8 @@ impl SpotifyService {
         &self,
         playlist: SimplifiedPlaylist,
         user: &UserModel,
+        spotify: &AuthCodeSpotify
     ) -> Result<(), AppError> {
-        let spotify = self.get_spotify_client_connected(&user).await?;
         let mut tracks = spotify.playlist_items(playlist.id.clone(), None, None);
         let request = CreatePlaylistRequest {
             name: playlist.name,
@@ -358,7 +353,7 @@ impl SpotifyService {
                 expires_at: Some(token.expires_at.and_utc()),
                 expires_in: expires_in.clone(),
                 scopes: scopes!(
-                    "playlist-read-private playlist-modify-public playlist-modify-private"
+                    "playlist-read-private playlist-modify-public playlist-modify-private user-read-email"
                 ),
             })));
             if expires_in.num_seconds() < 0 {
