@@ -49,10 +49,51 @@ impl MusicBrainzService {
             .as_str()
             .map(|s| s.to_string());
 
-        let genre = recording["tags"]
-            .get(0)
-            .and_then(|tag| tag["name"].as_str())
-            .map(|s| s.to_string());
+        // 1. From recording
+        let mut genre = Self::extract_genre_from_tags(&recording["tags"]);
+        println!("le genre: {:?}", genre);
+
+        // 2. From release
+        if genre.is_none() {
+            println!("on teste release");
+            if let Some(release_id) = recording["releases"].get(0).and_then(|r| r["id"].as_str()) {
+                let release_url = format!(
+                    "https://musicbrainz.org/ws/2/release/{}?fmt=json&inc=tags",
+                    release_id
+                );
+                let release_res = agent
+                    .get(&release_url)
+                    .set("User-Agent", "Swaptun/1.0 (contact@swaptun.local)")
+                    .call()
+                    .map_err(|_| AppError::InternalServerError)?;
+                let release_data: Value =
+                    serde_json::from_reader(release_res.into_reader()).map_err(|_| AppError::InternalServerError)?;
+
+                genre = Self::extract_genre_from_tags(&release_data["tags"]);
+            }
+            println!("le genre: {:?}", genre);
+        }
+
+        // 3. From artist
+        if genre.is_none() {
+            println!("on teste artist");
+            if let Some(artist_id) = recording["artist-credit"][0]["artist"]["id"].as_str() {
+                let artist_url = format!(
+                    "https://musicbrainz.org/ws/2/artist/{}?fmt=json&inc=tags",
+                    artist_id
+                );
+                let artist_res = agent
+                    .get(&artist_url)
+                    .set("User-Agent", "Swaptun/1.0 (contact@swaptun.local)")
+                    .call()
+                    .map_err(|_| AppError::InternalServerError)?;
+                let artist_data: Value =
+                    serde_json::from_reader(artist_res.into_reader()).map_err(|_| AppError::InternalServerError)?;
+
+                genre = Self::extract_genre_from_tags(&artist_data["tags"]);
+            }
+            println!("genre :{:?}", genre);
+        }
 
         Ok(TrackInfo {
             title,
@@ -62,6 +103,15 @@ impl MusicBrainzService {
             genre,
         })
     }
+
+    fn extract_genre_from_tags(tags: &Value) -> Option<String> {
+        tags.as_array()?
+            .iter()
+            .filter_map(|tag| tag.get("name").and_then(|n| n.as_str()))
+            .next()
+            .map(|s| s.to_string())
+    }
+
 }
 
 pub async fn get_track_metadata(title: &str, artist: &str) -> Result<Option<TrackInfo>, AppError> {
