@@ -9,9 +9,6 @@ pub struct Model {
     pub birthdate: String,
     pub gender: String,
     pub region: String,
-    pub interests: String,
-    pub listening_minutes_per_day: i32,
-    pub main_devices: String,
     pub consent: bool,
 }
 

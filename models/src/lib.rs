@@ -33,7 +33,7 @@ pub use spotify_token::{
 pub use user::{
     ActiveModel as UserActiveModel, Column as UserColumn, Entity as UserEntity, Model as UserModel,
 };
-pub use user::{
+pub use user_info::{
     ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
     Model as UserInfoModel,
 };
