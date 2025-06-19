@@ -18,22 +18,3 @@ pub async fn get_track_metadata(query: web::Query<HashMap<String, String>>) -> R
 
     Ok(HttpResponse::Ok().json(track_info))
 }
-
-
-pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.route("/track_metadata", web::get().to(get_track_metadata));
-}
-
-pub async fn get_track_metadata(query: web::Query<HashMap<String, String>>) -> Result<HttpResponse, AppError> {
-    let title = query.get("title").ok_or_else(|| AppError::InternalServerError)?;
-    let artist = query.get("artist").ok_or_else(|| AppError::InternalServerError)?;
-
-    let service = MusicBrainzService::new();
-    let track_info = service.search_track(title, artist)?;
-
-    println!("Résultat MusicBrainz : {:?}", result);
-
-
-    Ok(HttpResponse::Ok().json(result))
-
-}

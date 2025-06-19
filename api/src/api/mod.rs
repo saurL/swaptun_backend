@@ -8,15 +8,13 @@ mod playlist;
 mod spotify;
 mod users;
 mod musicbrainz;
-<<<<<<< HEAD
 mod user_info;
-=======
->>>>>>> cec52d8 (api musicbrainz install + test)
 
 pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
     let db_data = web::Data::new(db);
 
     cfg.app_data(db_data.clone())
+        .service(web::scope("/test").configure(musicbrainz::configure))
         .route("/health", web::get().to(health_check))
         .service(
             web::scope("/api")
@@ -32,12 +30,8 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
                         .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
-<<<<<<< HEAD
                         .service(web::scope("/musicbrainz").configure(musicbrainz::configure))
                         .service(web::scope("/user_info").configure(|c| user_info::configure(c))),
-=======
-                        .service(web::scope("/musicbrainz").configure(musicbrainz::configure)),
->>>>>>> 4c855a5 (implement musicbrainz dans spotify)
                 ),
         );
 }
