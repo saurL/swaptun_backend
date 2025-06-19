@@ -1,8 +1,7 @@
 use actix_web::{HttpResponse, web};
 use swaptun_services::error::AppError;
 use swaptun_services::musicbrainz::MusicBrainzService;
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 use std::collections::HashMap;
 
 
@@ -18,10 +17,7 @@ pub async fn get_track_metadata(query: web::Query<HashMap<String, String>>) -> R
     let track_info = service.search_track(title, artist)?;
 
     Ok(HttpResponse::Ok().json(track_info))
-=======
-=======
-use std::collections::HashMap;
->>>>>>> 4c855a5 (implement musicbrainz dans spotify)
+}
 
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -35,13 +31,9 @@ pub async fn get_track_metadata(query: web::Query<HashMap<String, String>>) -> R
     let service = MusicBrainzService::new();
     let track_info = service.search_track(title, artist)?;
 
-<<<<<<< HEAD
     println!("Résultat MusicBrainz : {:?}", result);
 
 
     Ok(HttpResponse::Ok().json(result))
->>>>>>> cec52d8 (api musicbrainz install + test)
-=======
-    Ok(HttpResponse::Ok().json(track_info))
->>>>>>> 4c855a5 (implement musicbrainz dans spotify)
+
 }
