@@ -31,7 +31,6 @@ impl fmt::Display for AppError {
     }
 }
 #[cfg(feature = "full")]
-
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         match self {
@@ -69,6 +68,7 @@ impl From<DbErr> for AppError {
         AppError::Database(err)
     }
 }
+#[cfg(feature = "full")]
 impl From<oauth2::url::ParseError> for AppError {
     fn from(_: oauth2::url::ParseError) -> Self {
         error!("Failed to parse URL");
