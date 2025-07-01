@@ -10,6 +10,8 @@ mod playlist_origin_id_29_04_2025;
 mod spotify_code_29_04_2025;
 mod spotify_token_29_04_2025;
 
+mod youtube_token_28_06_2025;
+
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -25,6 +27,7 @@ impl MigratorTrait for Migrator {
             Box::new(spotify_token_29_04_2025::Migration),
             Box::new(playlist_origin_29_04_2025::Migration),
             Box::new(playlist_origin_id_29_04_2025::Migration),
+            Box::new(youtube_token_28_06_2025::Migration),
         ]
     }
 }

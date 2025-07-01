@@ -7,7 +7,7 @@ use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
 use log::error;
-use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
+use sea_orm::{ DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
 use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
 use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 

@@ -34,7 +34,7 @@ pub use spotify::*;
 
 #[cfg(feature = "full")]
 pub use yt_music::*;
-
+#[cfg(feature = "full")]
 pub mod yt_music;
 pub mod dto;
 pub mod validators;
