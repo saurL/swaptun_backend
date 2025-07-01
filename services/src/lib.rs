@@ -1,6 +1,7 @@
 pub mod auth;
 #[cfg(feature = "full")]
 pub mod deezer;
+#[cfg(feature = "full")]
 pub mod error;
 #[cfg(feature = "full")]
 pub mod music;
