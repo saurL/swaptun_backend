@@ -196,7 +196,10 @@ impl PlaylistService {
 
         match self.music_playlist_repository.create(music_playlist).await {
             Ok(_) => Ok(()),
-            Err(_) => Err(AppError::InternalServerError),
+            Err(e) => {
+                error!("Error adding music to playlist {}",e);
+                Err(AppError::InternalServerError)},
+
         }
     }
     pub async fn remove_music(
@@ -215,7 +218,9 @@ impl PlaylistService {
                 .await
             {
                 Ok(_) => Ok(()),
-                Err(_) => Err(AppError::InternalServerError),
+                Err(e) => {
+                    error!("Error removing music from playlist: {:?}", e);
+                    Err(AppError::InternalServerError)},
             }
         } else {
             Err(AppError::NotFound(format!(

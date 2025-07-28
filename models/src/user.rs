@@ -1,4 +1,4 @@
-use sea_orm::{entity::prelude::*, sqlx::types::chrono::NaiveDateTime};
+use sea_orm::{entity::prelude::*,  sqlx::types::chrono::NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
@@ -10,7 +10,6 @@ pub struct Model {
 
     #[serde(skip_serializing)]
     pub password: String,
-
     pub first_name: String,
     pub last_name: String,
     pub email: String,
@@ -63,5 +62,20 @@ impl Related<super::deezer_token::Entity> for Entity {
 impl Related<super::youtube_token::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::YoutubeToken.def()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserBean {
+    pub id: i32,
+    pub username: String,
+}
+
+impl Into<UserBean> for Model {
+    fn into(self) -> UserBean {
+        UserBean {
+            id: self.id,
+            username: self.username,
+        }
     }
 }

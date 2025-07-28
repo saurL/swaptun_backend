@@ -255,6 +255,7 @@ impl YoutubeMusicService {
         active_token.refresh_token = Set(token.refresh_token);
         active_token.expires_in = Set(token.expires_in as i64);  
         active_token.updated_on = Set(chrono::Utc::now().naive_utc());
+        self.save(active_token).await?;
         Ok(client)
     }
 
@@ -326,28 +327,40 @@ impl YoutubeMusicService {
             description: None,
             origin_id: playlist.playlist_id.get_playlist_id().to_string(),
         };
-        let playlist_model = self.playlist_service.create_or_get(request, &user).await?;
         let tracks = self.get_playlist_track(playlist, client).await?;
+        if tracks.is_empty() {
+            info!("No tracks found in playlist: {}", playlist.title);
+            return Ok(());
+        }
+        let playlist_model = self.playlist_service.create_or_get(request, &user).await?;
+
         let mut local_tracks = self
             .music_service
             .find_by_playlist(&playlist_model)
             .await?;
 
         for track in tracks {
+            let artist = match track
+            .artists
+            .clone()
+            .first()
+            {
+                Some(artist) => artist.name.clone(),
+                None => {
+                   continue; // Skip if no artist is found
+                }
+                
+            };
             if let Some(pos) = local_tracks.iter().position(|local_track| {
                 local_track.title == track.title
                     && local_track.artist
-                        == track
-                            .artists
-                            .clone()
-                            .first()
-                            .unwrap()
-                            .name
+                        == artist
                     && local_track.album == track.album.name.clone()
             }) {
                 local_tracks.remove(pos);
             }
             let album_info = self.get_album_info(&client, &track.album.id).await?;
+     
             let create_music_request = CreateMusicRequest {
                 title: track.title,
                 release_date: chrono::NaiveDate::from_ymd_opt(
@@ -358,13 +371,7 @@ impl YoutubeMusicService {
                 )
                 .unwrap_or_default(),
                 genre: None,
-                artist: track
-                    .artists
-                    .clone()
-                    .first()
-                    .unwrap()
-                    .name
-                    .clone(),
+                artist:artist,
                 album: track.album.name,
                 description: None,
             };
@@ -373,8 +380,10 @@ impl YoutubeMusicService {
                 .add_music(&playlist_model, music)
                 .await?;
         }
+        info!("Tracks to remove: {:?}", local_tracks);
 
         for local_track in local_tracks {
+            info!("Removing track from playlist: {:?}", local_track);
             self.playlist_service
                 .remove_music(&playlist_model, &local_track)
                 .await?;
