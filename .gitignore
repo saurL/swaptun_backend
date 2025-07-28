@@ -3,3 +3,5 @@
 .shuttle*
 Secrets*.toml
 **/target/ 
+maildata
+maillogs
