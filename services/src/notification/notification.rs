@@ -1,4 +1,3 @@
-use std::clone;
 use std::sync::Arc;
 
 use crate::dto::notification_request::*;
@@ -57,9 +56,10 @@ impl NotificationService {
         message_builder.notification(notification);
         // Ajout des données personnalisées
         if let Some(data) = &request.data {
-            message_builder
-                .data(data)
-                .map_err(|e| AppError::InternalServerError)?;
+            message_builder.data(data).map_err(|e| {
+                error!("Failed to add data to message: {}", e);
+                AppError::InternalServerError
+            })?;
         }
 
         // Définition de la priorité

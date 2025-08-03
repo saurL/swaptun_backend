@@ -11,7 +11,6 @@ use rspotify::model::{PlayableItem, SimplifiedPlaylist};
 use rspotify::prelude::{BaseClient, OAuthClient};
 use sea_orm::IntoActiveModel;
 use std::sync::Arc;
-use std::thread::spawn;
 
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
 use swaptun_models::{
