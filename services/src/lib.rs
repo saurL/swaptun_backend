@@ -6,6 +6,8 @@ pub mod error;
 pub mod music;
 pub mod musicbrainz;
 #[cfg(feature = "full")]
+pub mod notification;
+#[cfg(feature = "full")]
 pub mod playlist;
 #[cfg(feature = "full")]
 pub mod spotify;
@@ -34,6 +36,9 @@ pub use spotify::*;
 
 #[cfg(feature = "full")]
 pub use user::*;
+
+#[cfg(feature = "full")]
+pub use notification::*;
 
 pub mod dto;
 pub mod validators;

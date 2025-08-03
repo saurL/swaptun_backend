@@ -1,6 +1,6 @@
-use ureq::Agent;
-use serde_json::Value;
 use crate::error::AppError;
+use serde_json::Value;
+use ureq::Agent;
 
 pub struct MusicBrainzService;
 
@@ -12,7 +12,6 @@ pub struct TrackInfo {
     pub release_date: Option<String>,
     pub genre: Option<String>,
 }
-
 
 impl MusicBrainzService {
     pub fn new() -> Self {
@@ -34,8 +33,8 @@ impl MusicBrainzService {
             .map_err(|_| AppError::InternalServerError)?;
 
         let reader = res.into_reader();
-        let data: Value = serde_json::from_reader(reader).map_err(|_| AppError::InternalServerError)?;
-
+        let data: Value =
+            serde_json::from_reader(reader).map_err(|_| AppError::InternalServerError)?;
 
         let recording = &data["recordings"][0];
 
@@ -66,8 +65,8 @@ impl MusicBrainzService {
                     .set("User-Agent", "Swaptun/1.0 (contact@swaptun.local)")
                     .call()
                     .map_err(|_| AppError::InternalServerError)?;
-                let release_data: Value =
-                    serde_json::from_reader(release_res.into_reader()).map_err(|_| AppError::InternalServerError)?;
+                let release_data: Value = serde_json::from_reader(release_res.into_reader())
+                    .map_err(|_| AppError::InternalServerError)?;
 
                 genre = Self::extract_genre_from_tags(&release_data["tags"]);
             }
@@ -87,8 +86,8 @@ impl MusicBrainzService {
                     .set("User-Agent", "Swaptun/1.0 (contact@swaptun.local)")
                     .call()
                     .map_err(|_| AppError::InternalServerError)?;
-                let artist_data: Value =
-                    serde_json::from_reader(artist_res.into_reader()).map_err(|_| AppError::InternalServerError)?;
+                let artist_data: Value = serde_json::from_reader(artist_res.into_reader())
+                    .map_err(|_| AppError::InternalServerError)?;
 
                 genre = Self::extract_genre_from_tags(&artist_data["tags"]);
             }
@@ -111,12 +110,11 @@ impl MusicBrainzService {
             .next()
             .map(|s| s.to_string())
     }
-
 }
 
 pub async fn get_track_metadata(title: &str, artist: &str) -> Result<Option<TrackInfo>, AppError> {
     let service = MusicBrainzService::new();
-
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     match service.search_track(title, artist) {
         Ok(track_info) => Ok(Some(track_info)),
         Err(AppError::InternalServerError) => Ok(None), // Pas trouvé

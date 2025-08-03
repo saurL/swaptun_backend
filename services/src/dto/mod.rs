@@ -1,9 +1,11 @@
 pub mod music_request;
+pub mod notification_request;
 pub mod playlist_request;
 pub mod spotify;
 pub mod token_request;
 pub mod user_request;
 pub use music_request::*;
+pub use notification_request::*;
 pub use playlist_request::*;
 pub use spotify::*;
 pub use token_request::*;

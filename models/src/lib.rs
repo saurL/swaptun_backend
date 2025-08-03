@@ -1,4 +1,5 @@
 pub mod deezer_token;
+pub mod fcm_token;
 pub mod music;
 pub mod music_playlist;
 pub mod playlist;
@@ -9,6 +10,10 @@ pub mod user_info;
 pub use deezer_token::{
     ActiveModel as DeezerTokenActiveModel, Column as DeezerTokenColumn,
     Entity as DeezerTokenEntity, Model as DeezerTokenModel,
+};
+pub use fcm_token::{
+    ActiveModel as FcmTokenActiveModel, Column as FcmTokenColumn, Entity as FcmTokenEntity,
+    Model as FcmTokenModel,
 };
 pub use music::{
     ActiveModel as MusicActiveModel, Column as MusicColumn, Entity as MusicEntity,

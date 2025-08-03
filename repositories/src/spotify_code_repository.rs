@@ -53,7 +53,7 @@ impl SpotifyCodeRepository {
             .await
     }
 
-    pub async fn get_code(&self, user_model: UserModel) -> Result<SpotifyCodeModel, DbErr> {
+    pub async fn get_code(&self, user_model: &UserModel) -> Result<SpotifyCodeModel, DbErr> {
         let code = user_model
             .find_related(SpotifyCodeEntity)
             .one(self.db.as_ref())

@@ -30,6 +30,8 @@ pub enum Relation {
     SpotifyToken,
     #[sea_orm(has_one = "super::deezer_token::Entity")]
     DeezerToken,
+    #[sea_orm(has_one = "super::fcm_token::Entity")]
+    FcmToken,
     #[sea_orm(has_many = "super::playlist::Entity")]
     Playlist,
 }
@@ -55,5 +57,11 @@ impl Related<super::playlist::Entity> for Entity {
 impl Related<super::deezer_token::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::DeezerToken.def()
+    }
+}
+
+impl Related<super::fcm_token::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::FcmToken.def()
     }
 }

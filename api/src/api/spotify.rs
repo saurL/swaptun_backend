@@ -23,18 +23,17 @@ async fn get_authorization_url(
 async fn set_token(
     db: web::Data<DbConn>,
     req: web::Json<AddTokenRequest>,
-    http_req: HttpRequest,
+    claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let spotify_service = SpotifyService::new(db.get_ref().clone().into());
     let user_service = UserService::new(db.get_ref().clone().into());
-    let claims = http_req.extensions().get::<Claims>().cloned();
-    if let Some(claims) = claims {
-        let user = user_service.get_user_from_claims(claims).await?;
-        spotify_service.add_token(req.into_inner(), user).await?;
-        info!("Token added for user");
-    } else {
-        return Err(AppError::Unauthorized("Unauthorized".to_string()));
-    }
+
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+    spotify_service.add_token(req.into_inner(), user).await?;
+    info!("Token added for user");
+
     Ok(HttpResponse::Ok().json(true))
 }
 
@@ -50,6 +49,7 @@ async fn post_user_playlists(
         let user = user_service.get_user_from_claims(claims).await?;
         let playlists = spotify_service.get_user_playlists(user).await?;
         info!("playlists {:?}", playlists);
+        info!("fin de playlists spotify");
         Ok(HttpResponse::Ok().finish())
     } else {
         Err(AppError::Unauthorized("Unauthorized".to_string()))

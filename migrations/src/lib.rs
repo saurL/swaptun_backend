@@ -1,7 +1,9 @@
 pub use sea_orm_migration::prelude::*;
 
 mod deezer_token_29_04_2025;
+mod fcm_token_03_08_2025;
 mod m20250319_093000_create_tbl_users;
+mod m20250618_create_user_info_table;
 mod music29_04_2025;
 mod music_playlist;
 mod playlist29_04_2025;
@@ -9,7 +11,6 @@ mod playlist_origin_29_04_2025;
 mod playlist_origin_id_29_04_2025;
 mod spotify_code_29_04_2025;
 mod spotify_token_29_04_2025;
-mod m20250618_create_user_info_table;
 
 pub struct Migrator;
 
@@ -27,6 +28,7 @@ impl MigratorTrait for Migrator {
             Box::new(playlist_origin_29_04_2025::Migration),
             Box::new(playlist_origin_id_29_04_2025::Migration),
             Box::new(m20250618_create_user_info_table::Migration),
+            Box::new(fcm_token_03_08_2025::Migration),
         ]
     }
 }

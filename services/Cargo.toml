@@ -50,4 +50,6 @@ swaptun-repositories = { path = "../repositories", optional = true }
 swaptun-models = { path = "../models" }
 lazy_static = { version = "1.5.0", optional = true }
 rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli","env-file"] }
+fcm = "0.9.2"
+reqwest = { version = "0.11", features = ["json"] }
 

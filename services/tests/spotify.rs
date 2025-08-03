@@ -1,5 +1,5 @@
-use swaptun_services::TestDatabase;
 use swaptun_services::user::UserService;
+use swaptun_services::TestDatabase;
 use swaptun_services::{AddTokenRequest, DeleteTokenRequest, SpotifyService, UpdateTokenRequest};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -160,7 +160,7 @@ async fn test_get_spotify_token() {
     println!("Get User Result: {:?}", user);
 
     // Vérifie que le token peut être récupéré
-    let token = spotify_service.get_code(user).await;
+    let token = spotify_service.get_code(&user).await;
     println!("Get Token Result: {:?}", token);
     assert!(token.is_some());
     let token = token.unwrap();

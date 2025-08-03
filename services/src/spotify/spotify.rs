@@ -1,15 +1,17 @@
 use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
 use crate::{
-    get_track_metadata, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService, SpotifyUrlResponse
+    get_track_metadata, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
+    SpotifyUrlResponse,
 };
-use futures::StreamExt;
 use futures::future::join_all;
+use futures::StreamExt;
 use log::{error, info};
 use rspotify::model::{PlayableItem, SimplifiedPlaylist};
 use rspotify::prelude::{BaseClient, OAuthClient};
 use sea_orm::IntoActiveModel;
 use std::sync::Arc;
+use std::thread::spawn;
 
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
 use swaptun_models::{
@@ -43,7 +45,7 @@ impl SpotifyService {
 
     pub async fn add_code(&self, code: String, user: &UserModel) -> Result<(), AppError> {
         info!("Adding code");
-        match self.get_code(user.clone()).await {
+        match self.get_code(&user).await {
             Some(model) => {
                 let mut active_model = model.into_active_model();
                 active_model.token = Set(code.clone());
@@ -188,7 +190,7 @@ impl SpotifyService {
             .map_err(AppError::from)
     }
 
-    pub async fn get_code(&self, user_model: UserModel) -> Option<SpotifyCodeModel> {
+    pub async fn get_code(&self, user_model: &UserModel) -> Option<SpotifyCodeModel> {
         match self.spotify_code_repository.get_code(user_model).await {
             Ok(code) => Some(code),
             Err(_) => None,
@@ -216,7 +218,7 @@ impl SpotifyService {
         let spotify = AuthCodeSpotify::new(creds, oauth);
 
         // Obtaining the access token
-        let url = spotify.get_authorize_url(false).unwrap();
+        let url = spotify.get_authorize_url(true).unwrap();
         let response = SpotifyUrlResponse { url };
         Ok(response)
     }
@@ -236,13 +238,14 @@ impl SpotifyService {
                     if let Ok(playlist) = playlist_result {
                         playlist_models.push(playlist.clone());
                         // Créer la future d'importation sans l'attendre
-                        let import_future = self.import_playlist(playlist, &user,&spotify);
+                        let import_future = self.import_playlist(playlist, &user, &spotify);
                         import_futures.push(import_future);
                     }
                 }
 
                 // Attendre que toutes les importations soient terminées et collecter les erreurs
                 let import_results = join_all(import_futures).await;
+                info!("Import results: {:?}", import_results);
 
                 // Vérifier s'il y a des erreurs d'importation
                 for result in import_results {
@@ -266,7 +269,7 @@ impl SpotifyService {
         &self,
         playlist: SimplifiedPlaylist,
         user: &UserModel,
-        spotify: &AuthCodeSpotify
+        spotify: &AuthCodeSpotify,
     ) -> Result<(), AppError> {
         let mut tracks = spotify.playlist_items(playlist.id.clone(), None, None);
         let request = CreatePlaylistRequest {
@@ -276,22 +279,55 @@ impl SpotifyService {
             origin_id: playlist.id.to_string(),
         };
         let playlist = self.playlist_service.create_or_get(request, &user).await?;
+
         let mut local_tracks = self.music_service.find_by_playlist(&playlist).await?;
         while let Some(track) = tracks.next().await {
             if let Ok(track) = track {
                 if let Some(track) = track.track {
                     match track {
                         PlayableItem::Track(track) => {
-                            
-                            let artist_name = track.artists.first().map(|a| a.name.clone()).unwrap_or_default();
+                            // Vérifier si la musique existe déjà dans la playlist
+                            if let Some(index) = local_tracks.iter().position(|t| {
+                                t.title == track.name
+                                    && t.artist
+                                        == track.artists.first().map_or("", |a| a.name.as_str())
+                                    && t.album == track.album.name
+                            }) {
+                                info!(
+                                    "La musique {} - {} existe déjà dans la playlist",
+                                    track.artists.first().map_or("", |a| a.name.as_str()),
+                                    track.name
+                                );
+                                local_tracks.remove(index);
+                                continue;
+                            };
+                            let artist_name = track
+                                .artists
+                                .first()
+                                .map(|a| a.name.clone())
+                                .unwrap_or_default();
                             let track_title = track.name.clone();
 
                             let genre = match get_track_metadata(&track_title, &artist_name).await {
-                                Ok(Some(metadata)) => metadata.genre,
+                                Ok(Some(metadata)) => {
+                                    info!(
+                                        "Genre trouvé pour {} - {}: {}",
+                                        artist_name,
+                                        track_title,
+                                        metadata
+                                            .genre
+                                            .clone()
+                                            .unwrap_or_else(|| "Inconnu".to_string())
+                                    );
+                                    metadata.genre
+                                }
                                 Ok(None) => {
-                                    info!("Pas de genre trouvé pour {} - {}", artist_name, track_title);
+                                    info!(
+                                        "Pas de genre trouvé pour {} - {}",
+                                        artist_name, track_title
+                                    );
                                     None
-                                },
+                                }
                                 Err(e) => {
                                     error!("Erreur lors de la récupération du genre via MusicBrainz: {:?}", e);
                                     None
@@ -321,10 +357,15 @@ impl SpotifyService {
             }
         }
         for local_track in local_tracks {
+            info!(
+                "La musique {} n'existe plus dans la nouvelle playlist",
+                local_track.title
+            );
             self.playlist_service
                 .remove_music(&playlist, &local_track)
                 .await?;
         }
+
         Ok(())
     }
 
