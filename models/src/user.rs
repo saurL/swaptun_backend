@@ -10,7 +10,6 @@ pub struct Model {
 
     #[serde(skip_serializing)]
     pub password: String,
-
     pub first_name: String,
     pub last_name: String,
     pub email: String,
@@ -34,6 +33,8 @@ pub enum Relation {
     FcmToken,
     #[sea_orm(has_many = "super::playlist::Entity")]
     Playlist,
+    #[sea_orm(has_one = "super::youtube_token::Entity")]
+    YoutubeToken,
 }
 
 impl Related<super::spotify_code::Entity> for Entity {
@@ -63,5 +64,32 @@ impl Related<super::deezer_token::Entity> for Entity {
 impl Related<super::fcm_token::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::FcmToken.def()
+    }
+}
+
+impl Related<super::fcm_token::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::FcmToken.def()
+    }
+}
+
+impl Related<super::youtube_token::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::YoutubeToken.def()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UserBean {
+    pub id: i32,
+    pub username: String,
+}
+
+impl Into<UserBean> for Model {
+    fn into(self) -> UserBean {
+        UserBean {
+            id: self.id,
+            username: self.username,
+        }
     }
 }

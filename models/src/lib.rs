@@ -7,6 +7,7 @@ pub mod spotify_code;
 pub mod spotify_token;
 pub mod user;
 pub mod user_info;
+pub mod youtube_token;
 pub use deezer_token::{
     ActiveModel as DeezerTokenActiveModel, Column as DeezerTokenColumn,
     Entity as DeezerTokenEntity, Model as DeezerTokenModel,
@@ -37,8 +38,18 @@ pub use spotify_token::{
 };
 pub use user::{
     ActiveModel as UserActiveModel, Column as UserColumn, Entity as UserEntity, Model as UserModel,
+    UserBean,
+};
+
+pub use user_info::{
+    ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
+    Model as UserInfoModel,
 };
 pub use user_info::{
     ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
     Model as UserInfoModel,
+};
+pub use youtube_token::{
+    ActiveModel as YoutubeTokenActiveModel, Column as YoutubeTokenColumn,
+    Entity as YoutubeTokenEntity, Model as YoutubeTokenModel,
 };

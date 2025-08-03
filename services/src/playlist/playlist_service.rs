@@ -7,7 +7,7 @@ use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
 use log::error;
-use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
+use sea_orm::{ DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
 use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
 use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 
@@ -196,7 +196,10 @@ impl PlaylistService {
 
         match self.music_playlist_repository.create(music_playlist).await {
             Ok(_) => Ok(()),
-            Err(_) => Err(AppError::InternalServerError),
+            Err(e) => {
+                error!("Error adding music to playlist {}",e);
+                Err(AppError::InternalServerError)},
+
         }
     }
     pub async fn remove_music(
@@ -215,7 +218,9 @@ impl PlaylistService {
                 .await
             {
                 Ok(_) => Ok(()),
-                Err(_) => Err(AppError::InternalServerError),
+                Err(e) => {
+                    error!("Error removing music from playlist: {:?}", e);
+                    Err(AppError::InternalServerError)},
             }
         } else {
             Err(AppError::NotFound(format!(

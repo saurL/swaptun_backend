@@ -379,3 +379,46 @@ If you have any questions or suggestions about this project, please open an issu
 
 _This boilerplate was created to provide a solid foundation for Rust web applications with a focus on maintainability and best practices. Happy coding!_
 x²
+# Utilisation locale de Poste.io avec Docker
+Cette section explique comment lancer un serveur mail Poste.io local via Docker, créer les fichiers de logs nécessaires, puis accéder à l'interface d'administration dans un navigateur.
+
+1. Lancer le conteneur Poste.io
+Sous Linux / macOS
+```bash
+docker run -d --name mailserver \
+  -p 80:80 -p 443:443 -p 25:25 -p 465:465 -p 587:587 \
+  -e "HOSTNAME=mail.localhost" \
+  -e "HTTPS=OFF" \
+  -v "$(pwd)/maildata:/data" \
+  -v "$(pwd)/mailstate:/state" \
+  -v "$(pwd)/maillogs:/var/log" \
+  analogic/poste.io
+```
+Sous Windows PowerShell (à lancer dans un dossier choisi)
+```powershell
+docker run -d --name mailserver `
+  -p 80:80 -p 443:443 -p 25:25 -p 465:465 -p 587:587 `
+  -e "HOSTNAME=mail.localhost" `
+  -e "HTTPS=OFF" `
+  -v "${PWD}/maildata:/data" `
+  -v "${PWD}/mailstate:/state" `
+  -v "${PWD}/maillogs:/var/log" `
+  analogic/poste.io
+```
+2. Créer les fichiers logs manquants dans le conteneur
+Le serveur Poste.io nécessite certains fichiers de logs pour démarrer correctement. Pour cela, exécutez les commandes suivantes après le démarrage du conteneur :
+
+```bash
+docker exec mailserver mkdir -p /var/log/nginx
+docker exec mailserver touch /var/log/nginx/access.log
+docker exec mailserver touch /var/log/nginx/error.log
+```
+3. Accéder à l’interface d’administration
+Ouvre ton navigateur et rends-toi à l’adresse suivante pour initialiser le serveur mail :
+
+HTTP : http://localhost
+
+HTTPS : https://localhost (si tu actives HTTPS)
+
+Tu devrais voir la page d’administration Poste.io où tu peux configurer tes comptes mail et autres paramètres.
+

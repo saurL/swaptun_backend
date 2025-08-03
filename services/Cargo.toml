@@ -17,7 +17,9 @@ full = [
   "swaptun-migrations",
   "swaptun-repositories",
   "chrono",
-  "actix-web"
+  "actix-web",
+  "ytmapi-rs",
+  "oauth2"
 ]
 
 
@@ -50,6 +52,11 @@ swaptun-repositories = { path = "../repositories", optional = true }
 swaptun-models = { path = "../models" }
 lazy_static = { version = "1.5.0", optional = true }
 rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli","env-file"] }
+<<<<<<< HEAD
 fcm = "0.9.2"
 reqwest = { version = "0.11", features = ["json"] }
 
+=======
+oauth2 =  {version = "5.0.0", optional= true }
+ytmapi-rs =  {git ="https://github.com/saurL/youtui.git", branch ="public-token", default-features = false,features= ["rustls-tls", "simplified-queries"],optional= true }
+>>>>>>> 440e0ef8645779746efa255a4c7dfedc0dd4fb10

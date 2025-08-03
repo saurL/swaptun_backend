@@ -3,6 +3,7 @@ use actix_web::{HttpResponse, ResponseError};
 use sea_orm::DbErr;
 use serde::Serialize;
 use std::fmt;
+use log::error;
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub status: String,
@@ -30,7 +31,6 @@ impl fmt::Display for AppError {
     }
 }
 #[cfg(feature = "full")]
-
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         match self {
@@ -66,5 +66,12 @@ impl ResponseError for AppError {
 impl From<DbErr> for AppError {
     fn from(err: DbErr) -> Self {
         AppError::Database(err)
+    }
+}
+#[cfg(feature = "full")]
+impl From<oauth2::url::ParseError> for AppError {
+    fn from(_: oauth2::url::ParseError) -> Self {
+        error!("Failed to parse URL");
+        AppError::InternalServerError
     }
 }

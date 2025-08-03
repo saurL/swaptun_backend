@@ -1,6 +1,7 @@
 pub mod auth;
 #[cfg(feature = "full")]
 pub mod deezer;
+
 pub mod error;
 #[cfg(feature = "full")]
 pub mod music;
@@ -40,6 +41,10 @@ pub use user::*;
 #[cfg(feature = "full")]
 pub use notification::*;
 
+#[cfg(feature = "full")]
+pub use yt_music::*;
+#[cfg(feature = "full")]
+pub mod yt_music;
 pub mod dto;
 pub mod validators;
 pub use dto::*;

@@ -4,7 +4,7 @@ use sea_orm::DbConn;
 
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
-use swaptun_services::{AddTokenRequest, GetAuthorizationUrlRequest, SpotifyService, UserService};
+use swaptun_services::{AddTokenRequest, SpotifyService, UserService};
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/authorization-url", web::get().to(get_authorization_url))
         .service(web::resource("/token").post(set_token))
@@ -13,10 +13,10 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 
 async fn get_authorization_url(
     db: web::Data<DbConn>,
-    req: web::Json<GetAuthorizationUrlRequest>,
+
 ) -> Result<HttpResponse, AppError> {
     let spotify_service = SpotifyService::new(db.get_ref().clone().into());
-    let authorization_url = spotify_service.get_authorization_url(req.port).await?;
+    let authorization_url = spotify_service.get_authorization_url().await?;
     Ok(HttpResponse::Ok().json(authorization_url))
 }
 

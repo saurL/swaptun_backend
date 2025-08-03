@@ -2,7 +2,6 @@ use actix_web::web::ServiceConfig;
 use actix_web::{web, HttpResponse};
 use sea_orm::DbConn;
 use swaptun_services::auth::jwt::{JwtMiddleware, RoleGuard};
-
 mod auth;
 mod musicbrainz;
 mod notification;
@@ -10,6 +9,7 @@ mod playlist;
 mod spotify;
 mod user_info;
 mod users;
+mod youtube;
 
 pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
     let db_data = web::Data::new(db);
@@ -31,6 +31,7 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
                         .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
+                        .service(web::scope("/youtube").configure(|c| youtube::configure(c)))
                         .service(web::scope("/musicbrainz").configure(musicbrainz::configure))
                         .service(web::scope("/user_info").configure(|c| user_info::configure(c)))
                         .service(
