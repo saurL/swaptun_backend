@@ -45,10 +45,7 @@ pub use user_info::{
     ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
     Model as UserInfoModel,
 };
-pub use user_info::{
-    ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
-    Model as UserInfoModel,
-};
+
 pub use youtube_token::{
     ActiveModel as YoutubeTokenActiveModel, Column as YoutubeTokenColumn,
     Entity as YoutubeTokenEntity, Model as YoutubeTokenModel,

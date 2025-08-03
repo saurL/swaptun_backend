@@ -67,12 +67,6 @@ impl Related<super::fcm_token::Entity> for Entity {
     }
 }
 
-impl Related<super::fcm_token::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::FcmToken.def()
-    }
-}
-
 impl Related<super::youtube_token::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::YoutubeToken.def()

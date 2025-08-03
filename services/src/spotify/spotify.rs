@@ -209,15 +209,8 @@ impl SpotifyService {
         //     ..Default::default(),
         // };
         // ```
-<<<<<<< HEAD
-        let oauth: OAuth = OAuth {
-            redirect_uri: format!("http://127.0.0.1:{}", port),
-            scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private user-read-email"),
-            ..Default::default()
-        };
-=======
+
         let oauth: OAuth = self.get_oauth();
->>>>>>> 440e0ef8645779746efa255a4c7dfedc0dd4fb10
 
         let spotify = AuthCodeSpotify::new(creds, oauth);
 
@@ -425,7 +418,7 @@ impl SpotifyService {
         }
     }
 
-    pub fn get_oauth(&self) -> OAuth{
+    pub fn get_oauth(&self) -> OAuth {
         OAuth {
             redirect_uri: "https://swaptun.com/open/spotify".to_string(),
             scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private"),
