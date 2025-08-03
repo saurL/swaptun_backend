@@ -5,6 +5,7 @@ pub mod deezer;
 pub mod error;
 #[cfg(feature = "full")]
 pub mod music;
+#[cfg(feature = "full")]
 pub mod musicbrainz;
 #[cfg(feature = "full")]
 pub mod notification;
@@ -43,9 +44,9 @@ pub use notification::*;
 
 #[cfg(feature = "full")]
 pub use yt_music::*;
-#[cfg(feature = "full")]
-pub mod yt_music;
 pub mod dto;
 pub mod validators;
+#[cfg(feature = "full")]
+pub mod yt_music;
 pub use dto::*;
 pub use swaptun_models::*;
