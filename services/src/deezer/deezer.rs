@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
+use crate::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use sea_orm::IntoActiveModel;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
 use swaptun_models::{DeezerTokenActiveModel, UserModel};

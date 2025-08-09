@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::dto::notification_request::*;
 use crate::error::AppError;
+use crate::notification::dto::notification_request::*;
 use google_fcm1::api::{AndroidConfig, Message, Notification, SendMessageRequest};
 use google_fcm1::yup_oauth2::hyper_rustls::HttpsConnector;
 

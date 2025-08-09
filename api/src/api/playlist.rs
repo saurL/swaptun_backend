@@ -36,12 +36,9 @@ async fn get_user_playlists(
     db: web::Data<DbConn>,
     req: HttpRequest,
     query: web::Json<GetPlaylistsParams>,
+    claims: web::ReqData<Claims>
 ) -> Result<HttpResponse, AppError> {
-    let claims = req
-        .extensions()
-        .get::<Claims>()
-        .cloned()
-        .ok_or_else(|| AppError::Unauthorized("No authentication token found".to_string()))?;
+    let claims = claims.into_inner();
 
     let user_service = UserService::new(db.get_ref().clone().into());
     let user = user_service.get_user_from_claims(claims).await?;
@@ -192,9 +189,9 @@ async fn send_playlist_to_origin(
         .await?;
     let req = req.into_inner();
     let playlist_id = path.into_inner();
-    let origin = req.origin;
-    // Send playlist based on its origin
-    match origin {
+    let destination = req.destination;
+    // Send playlist based on its destination
+    match destination {
         PlaylistOrigin::Spotify => {
             let spotify_service = SpotifyService::new(db.clone());
 

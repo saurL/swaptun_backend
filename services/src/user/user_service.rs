@@ -1,4 +1,4 @@
-use crate::auth::{Claims, generate_token, verify_password};
+use crate::auth::{generate_token, verify_password, Claims};
 use crate::validators::user_validators::process_validation_errors;
 use crate::{
     auth::{hash_password, validate_token},
@@ -11,7 +11,7 @@ use std::sync::Arc;
 use swaptun_models::{UserActiveModel, UserModel};
 use swaptun_repositories::UserRepository;
 
-use crate::dto::{
+use crate::{
     CreateUserRequest, GetUsersParams, LoginEmailRequest, LoginRequest, LoginResponse,
     UpdateUserRequest, VerifyTokenRequest, VerifyTokenResponse,
 };
