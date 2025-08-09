@@ -32,7 +32,7 @@ pub struct GetPlaylistResponse {
     pub vec: Vec<PlaylistModel>,
 }
 
-#[derive(Deserialize, Serialize, Validate)]
+#[derive(Deserialize, Serialize, Validate, Debug)]
 pub struct SendPlaylistRequest {
     pub origin: PlaylistOrigin,
 }
