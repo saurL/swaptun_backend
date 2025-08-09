@@ -30,11 +30,9 @@ pub async fn register_fcm_token(
     process_validation_errors(&request)?;
 
     // Récupération de la clé serveur depuis les variables d'environnement
-    let server_key = std::env::var("FCM_SERVER_KEY").map_err(|_| AppError::InternalServerError)?;
 
     // Création du service de notification
-    let notification_service =
-        NotificationService::new(server_key, Arc::new(db.get_ref().clone()))?;
+    let notification_service = NotificationService::new(Arc::new(db.get_ref().clone())).await?;
 
     // Enregistrement du token FCM
     match notification_service
@@ -80,18 +78,17 @@ pub async fn send_test_notification(
 
     // Validation des données d'entrée
     process_validation_errors(&request)?;
-
+    // Ajout d'un délai de 5 secondes avant d'enregistrer le token FCM
+    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     // Récupération de la clé serveur depuis les variables d'environnement
-    let server_key = std::env::var("FCM_SERVER_KEY").map_err(|_| AppError::InternalServerError)?;
+    // let server_key = std::env::var("FCM_SERVER_KEY").map_err(|_| AppError::InternalServerError)?;
 
     // Création du service de notification
-    let notification_service =
-        NotificationService::new(server_key.clone(), Arc::new(db.get_ref().clone()))?;
+    let notification_service = NotificationService::new(Arc::new(db.get_ref().clone())).await?;
 
     // Envoi de la notification de test
     match notification_service
         .send_notification_to_user(
-            &server_key,
             request.user_id,
             request.title.clone(),
             request.body.clone(),

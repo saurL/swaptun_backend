@@ -2,6 +2,7 @@ use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
+use crate::m20250319_093000_create_tbl_users::TblUsers;
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
@@ -52,20 +53,4 @@ pub enum TblUserInfo {
     Gender,
     Region,
     Consent,
-}
-
-// Identificateurs pour la table users (référence)
-#[derive(DeriveIden)]
-pub enum TblUsers {
-    Table,
-    Id,
-    Username,
-    Password,
-    FirstName,
-    LastName,
-    Email,
-    Role,
-    CreatedOn,
-    UpdatedOn,
-    DeletedOn,
 }

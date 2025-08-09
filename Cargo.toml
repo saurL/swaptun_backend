@@ -11,4 +11,5 @@ default = ["full"]
 full= ["swaptun-api/full"]
 
 [dependencies]
+google-fcm1 = "6.0.0"
 swaptun-api = { path = "./api", default-features = false }

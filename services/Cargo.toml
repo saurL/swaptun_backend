@@ -52,7 +52,7 @@ swaptun-repositories = { path = "../repositories", optional = true }
 swaptun-models = { path = "../models" }
 lazy_static = { version = "1.5.0", optional = true }
 rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli","env-file"] }
-fcm = {version="0.9.2", default-features = false , features = ["rustls"]}
+google-fcm1 = "6.0.0"
 reqwest = { version = "0.11.27", default-features = false, features = ["json", "rustls-tls"] }
 
 oauth2 =  {version = "5.0.0", optional= true }

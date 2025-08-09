@@ -5,3 +5,4 @@ Secrets*.toml
 **/target/ 
 maildata
 maillogs
+swaptun.json

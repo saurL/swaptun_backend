@@ -1,11 +1,15 @@
+use std::sync::Arc;
+
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
-use sea_orm::DbConn;
+use log::error;
+use sea_orm::{DatabaseConnection, DbConn};
 
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
     CreateMusicRequest, CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistsParams,
-    PlaylistService, UpdatePlaylistRequest, UserService,
+    PlaylistOrigin, PlaylistService, SendPlaylistRequest, SpotifyService, UpdatePlaylistRequest,
+    UserService, YoutubeMusicService,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -24,7 +28,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::resource("/{id}/music")
             .post(add_music_to_playlist)
             .delete(remove_music_from_playlist),
-    );
+    )
+    .service(web::resource("/{id}/send").post(send_playlist_to_origin));
 }
 
 async fn get_user_playlists(
@@ -119,15 +124,11 @@ async fn delete_playlist(
 
 async fn add_music_to_playlist(
     db: web::Data<DbConn>,
-    req: HttpRequest,
+    claims: web::ReqData<Claims>,
     path: web::Path<i32>,
     request: web::Json<CreateMusicRequest>,
 ) -> Result<HttpResponse, AppError> {
-    let claims = req
-        .extensions()
-        .get::<Claims>()
-        .cloned()
-        .ok_or_else(|| AppError::Unauthorized("No authentication token found".to_string()))?;
+    let claims = claims.into_inner();
 
     let playlist_id = path.into_inner();
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
@@ -176,4 +177,46 @@ async fn remove_music_from_playlist(
     playlist_service.remove_music(&playlist, &music).await?;
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+async fn send_playlist_to_origin(
+    db: web::Data<DbConn>,
+    req: web::Json<SendPlaylistRequest>,
+    claims: web::ReqData<Claims>,
+    path: web::Path<i32>,
+) -> Result<String, AppError> {
+    let db: Arc<DatabaseConnection> = db.get_ref().clone().into();
+    let user_service = UserService::new(db.clone());
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+    let req = req.into_inner();
+    let playlist_id = path.into_inner();
+    let origin = req.origin;
+    // Send playlist based on its origin
+    match origin {
+        PlaylistOrigin::Spotify => {
+            let spotify_service = SpotifyService::new(db.clone());
+
+            spotify_service
+                .create_spotify_playlist_from_db(playlist_id, &user)
+                .await
+        }
+        PlaylistOrigin::YoutubeMusic => {
+            let youtube_service = YoutubeMusicService::new(db.clone());
+
+            youtube_service
+                .import_playlist_in_yt(&user, playlist_id)
+                .await
+                .map(|_| "Playlist sent to YouTube Music successfully".to_string())
+                .map_err(|e| {
+                    error!("Error sending playlist to YouTube Music: {:?}", e);
+                    e
+                })
+        }
+        PlaylistOrigin::Deezer => {
+            // For Deezer, we need to implement the functionality
+            Err(AppError::InternalServerError)
+        }
+    }
 }

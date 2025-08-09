@@ -6,8 +6,11 @@ use crate::DeletePlaylistRequest;
 use crate::GetPlaylistResponse;
 use crate::GetPlaylistsParams;
 use crate::UpdatePlaylistRequest;
+#[cfg(feature = "full")]
+use crate::{MusicService, SpotifyService, YoutubeMusicService};
 use log::error;
-use sea_orm::{ DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
+use sea_orm::{DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
+use swaptun_models::PlaylistOrigin;
 use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
 use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 
@@ -197,9 +200,9 @@ impl PlaylistService {
         match self.music_playlist_repository.create(music_playlist).await {
             Ok(_) => Ok(()),
             Err(e) => {
-                error!("Error adding music to playlist {}",e);
-                Err(AppError::InternalServerError)},
-
+                error!("Error adding music to playlist {}", e);
+                Err(AppError::InternalServerError)
+            }
         }
     }
     pub async fn remove_music(
@@ -220,13 +223,53 @@ impl PlaylistService {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("Error removing music from playlist: {:?}", e);
-                    Err(AppError::InternalServerError)},
+                    Err(AppError::InternalServerError)
+                }
             }
         } else {
             Err(AppError::NotFound(format!(
                 "Music {} not found in playlist with id {}",
                 music.title, playlist.id
             )))
+        }
+    }
+
+    pub async fn send_playlist_to_origin(
+        &self,
+        playlist_id: i32,
+        user: &UserModel,
+        db: Arc<DatabaseConnection>,
+    ) -> Result<String, AppError> {
+        // Get the playlist
+        let playlist = self.get_playlist(playlist_id).await?;
+
+        // Create services
+
+        // Send playlist based on its origin
+        match playlist.origin {
+            PlaylistOrigin::Spotify => {
+                let spotify_service = SpotifyService::new(db.clone());
+
+                spotify_service
+                    .create_spotify_playlist_from_db(playlist_id, user)
+                    .await
+            }
+            PlaylistOrigin::YoutubeMusic => {
+                let youtube_service = YoutubeMusicService::new(db.clone());
+
+                youtube_service
+                    .import_playlist_in_yt(user, playlist_id)
+                    .await
+                    .map(|_| "Playlist sent to YouTube Music successfully".to_string())
+                    .map_err(|e| {
+                        error!("Error sending playlist to YouTube Music: {:?}", e);
+                        e
+                    })
+            }
+            PlaylistOrigin::Deezer => {
+                // For Deezer, we need to implement the functionality
+                Err(AppError::InternalServerError)
+            }
         }
     }
 }

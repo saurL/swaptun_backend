@@ -1,4 +1,3 @@
-use fcm::ErrorReason;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use validator::Validate;
@@ -78,7 +77,7 @@ impl Default for NotificationPriority {
 pub struct NotificationResponse {
     pub success: bool,
     pub message_id: Option<u64>,
-    pub error: Option<ErrorReason>,
+    pub error: Option<String>,
     pub multicast_id: Option<i64>,
     pub success_count: Option<usize>,
     pub failure_count: Option<usize>,
@@ -90,7 +89,7 @@ pub struct NotificationResponse {
 pub struct NotificationResult {
     pub message_id: Option<u64>,
     pub registration_id: Option<String>,
-    pub error: Option<ErrorReason>,
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]

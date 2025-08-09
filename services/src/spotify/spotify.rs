@@ -7,7 +7,9 @@ use crate::{
 use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
-use rspotify::model::{PlayableItem, SimplifiedPlaylist};
+use rspotify::model::{
+    FullPlaylist, PlayableId, PlayableItem, SearchResult, SimplifiedPlaylist, TrackId,
+};
 use rspotify::prelude::{BaseClient, OAuthClient};
 use sea_orm::IntoActiveModel;
 use std::sync::Arc;
@@ -423,5 +425,166 @@ impl SpotifyService {
             scopes: scopes!("playlist-read-private playlist-modify-public playlist-modify-private"),
             ..Default::default()
         }
+    }
+
+    /// Creates a playlist on Spotify from a database playlist and adds matching tracks
+    pub async fn create_spotify_playlist_from_db(
+        &self,
+        playlist_id: i32,
+        user: &UserModel,
+    ) -> Result<String, AppError> {
+        // Get the database playlist
+        let playlist = self.playlist_service.get_playlist(playlist_id).await?;
+
+        // Get Spotify client
+        let spotify = self.get_spotify_client_connected(user).await?;
+
+        // Get user's Spotify ID
+        let spotify_user = spotify.me().await.map_err(|e| {
+            error!("Error getting Spotify user: {:?}", e);
+            AppError::InternalServerError
+        })?;
+
+        // Create the playlist on Spotify
+        let new_playlist = spotify
+            .user_playlist_create(
+                spotify_user.id.clone(),
+                &playlist.name,
+                Some(false), // public
+                Some(false), // collaborative
+                playlist.description.as_deref(),
+            )
+            .await
+            .map_err(|e| {
+                error!("Error creating Spotify playlist: {:?}", e);
+                AppError::InternalServerError
+            })?;
+
+        info!("Created Spotify playlist with ID: {}", new_playlist.id);
+
+        // Get tracks from the database playlist
+        let tracks = self
+            .music_service
+            .find_by_playlist(&playlist)
+            .await
+            .map_err(|e| {
+                error!("Error getting playlist tracks: {:?}", e);
+                AppError::InternalServerError
+            })?;
+
+        if tracks.is_empty() {
+            info!("No tracks in playlist, returning early");
+            return Ok(new_playlist.id.to_string());
+        }
+
+        // Search for tracks on Spotify and collect their IDs
+        let mut spotify_track_ids = Vec::new();
+        let mut not_found_tracks = Vec::new();
+
+        for track in tracks {
+            // Search for the track on Spotify
+            let query = format!("track:{} artist:{}", track.title, track.artist);
+
+            match spotify
+                .search(
+                    &query,
+                    rspotify::model::SearchType::Track,
+                    None,
+                    None,
+                    Some(5),
+                    None,
+                )
+                .await
+            {
+                Ok(SearchResult::Tracks(track_result)) => {
+                    for spotify_track in track_result.items.iter().take(5) {
+                        if let Some(track_id) = &spotify_track.id {
+                            if spotify_track.name.to_lowercase() == track.title.to_lowercase()
+                                && spotify_track.artists.first().map(|a| a.name.to_lowercase())
+                                    == Some(track.artist.to_lowercase())
+                            {
+                                spotify_track_ids.push(track_id.clone());
+                                info!("Found track on Spotify: {} - {}", track.artist, track.title);
+                                break;
+                            } else {
+                                info!(
+                                    "Track found but artist/title does not match: Spotify: {} - {}, DB: {} - {}",
+                                    spotify_track.artists.first().map_or("", |a| a.name.as_str()),
+                                    spotify_track.name,
+                                    track.artist,
+                                    track.title
+                                );
+                            }
+                        } else {
+                            info!(
+                                "Track found but has no ID: {} - {}",
+                                track.artist, track.title
+                            );
+                        }
+                    }
+                    // Si aucun des 5 premiers ne correspond, on ajoute à not_found_tracks
+                    if !spotify_track_ids.iter().any(|id| {
+                        track_result
+                            .items
+                            .iter()
+                            .take(5)
+                            .any(|t| t.id.as_ref() == Some(id))
+                    }) {
+                        not_found_tracks.push(format!("{} - {}", track.artist, track.title));
+                        info!(
+                            "Track not found on Spotify: {} - {}",
+                            track.artist, track.title
+                        );
+                    }
+                }
+                Ok(_) => {
+                    not_found_tracks.push(format!("{} - {}", track.artist, track.title));
+                    info!(
+                        "Unexpected search result for track: {} - {}",
+                        track.artist, track.title
+                    );
+                }
+                Err(e) => {
+                    error!(
+                        "Error searching for track {} - {}: {:?}",
+                        track.artist, track.title, e
+                    );
+                    not_found_tracks.push(format!("{} - {}", track.artist, track.title));
+                }
+            }
+        }
+
+        // Add tracks to the Spotify playlist in batches of 100 (Spotify's limit)
+        if !spotify_track_ids.is_empty() {
+            for chunk in spotify_track_ids.chunks(100) {
+                let track_ids: Vec<PlayableId> = chunk
+                    .iter()
+                    .map(|id| PlayableId::from(id.clone()))
+                    .collect();
+
+                match spotify
+                    .playlist_add_items(new_playlist.id.clone(), track_ids, None)
+                    .await
+                {
+                    Ok(_) => {
+                        info!("Added {} tracks to Spotify playlist", chunk.len());
+                    }
+                    Err(e) => {
+                        error!("Error adding tracks to Spotify playlist: {:?}", e);
+                        return Err(AppError::InternalServerError);
+                    }
+                }
+            }
+        }
+
+        // Log tracks that weren't found
+        if !not_found_tracks.is_empty() {
+            info!("The following tracks were not found on Spotify:");
+            for track in &not_found_tracks {
+                info!("  - {}", track);
+            }
+        }
+
+        Ok(new_playlist.id.to_string())
     }
 }
