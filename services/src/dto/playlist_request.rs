@@ -34,5 +34,5 @@ pub struct GetPlaylistResponse {
 
 #[derive(Deserialize, Serialize, Validate, Debug)]
 pub struct SendPlaylistRequest {
-    pub origin: PlaylistOrigin,
+    pub destination: PlaylistOrigin,
 }

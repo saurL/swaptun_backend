@@ -233,43 +233,4 @@ impl PlaylistService {
             )))
         }
     }
-
-    pub async fn send_playlist_to_origin(
-        &self,
-        playlist_id: i32,
-        user: &UserModel,
-        db: Arc<DatabaseConnection>,
-    ) -> Result<String, AppError> {
-        // Get the playlist
-        let playlist = self.get_playlist(playlist_id).await?;
-
-        // Create services
-
-        // Send playlist based on its origin
-        match playlist.origin {
-            PlaylistOrigin::Spotify => {
-                let spotify_service = SpotifyService::new(db.clone());
-
-                spotify_service
-                    .create_spotify_playlist_from_db(playlist_id, user)
-                    .await
-            }
-            PlaylistOrigin::YoutubeMusic => {
-                let youtube_service = YoutubeMusicService::new(db.clone());
-
-                youtube_service
-                    .import_playlist_in_yt(user, playlist_id)
-                    .await
-                    .map(|_| "Playlist sent to YouTube Music successfully".to_string())
-                    .map_err(|e| {
-                        error!("Error sending playlist to YouTube Music: {:?}", e);
-                        e
-                    })
-            }
-            PlaylistOrigin::Deezer => {
-                // For Deezer, we need to implement the functionality
-                Err(AppError::InternalServerError)
-            }
-        }
-    }
 }
