@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
+use super::{
+    CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistResponse, GetPlaylistsParams,
+    UpdatePlaylistRequest,
+};
 use crate::error::AppError;
-use crate::CreatePlaylistRequest;
-use crate::DeletePlaylistRequest;
-use crate::GetPlaylistResponse;
-use crate::GetPlaylistsParams;
-use crate::UpdatePlaylistRequest;
-#[cfg(feature = "full")]
-use crate::{MusicService, SpotifyService, YoutubeMusicService};
+
 use log::error;
 use sea_orm::{DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
-use swaptun_models::PlaylistOrigin;
 use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
 use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 

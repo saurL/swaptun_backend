@@ -1,15 +1,13 @@
-use crate::dto::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use crate::error::AppError;
 use crate::{
-    get_track_metadata, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
-    SpotifyUrlResponse,
+    get_track_metadata, music::dto::CreateMusicRequest, CreatePlaylistRequest, MusicService,
+    PlaylistService, SpotifyUrlResponse,
 };
+use crate::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
-use rspotify::model::{
-    FullPlaylist, PlayableId, PlayableItem, SearchResult, SimplifiedPlaylist, TrackId,
-};
+use rspotify::model::{PlayableId, PlayableItem, SearchResult, SimplifiedPlaylist};
 use rspotify::prelude::{BaseClient, OAuthClient};
 use sea_orm::IntoActiveModel;
 use std::sync::Arc;

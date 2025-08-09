@@ -17,11 +17,8 @@ use ytmapi_rs::{
 };
 
 use crate::{
-    dto::{CreateMusicRequest, CreatePlaylistRequest},
-    error::AppError,
-    music::music_service::MusicService,
-    playlist::playlist_service::PlaylistService,
-    youtube, YoutubeUrlResponse,
+    error::AppError, music::dto::CreateMusicRequest, music::music_service::MusicService,
+    playlist::playlist_service::PlaylistService, CreatePlaylistRequest, YoutubeUrlResponse,
 };
 use log::{error, info};
 use oauth2::{

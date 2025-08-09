@@ -396,22 +396,16 @@ docker run -d --name mailserver \
 ```
 Sous Windows PowerShell (à lancer dans un dossier choisi)
 ```powershell
-docker run -d --name mailserver `
-  -p 80:80 -p 443:443 -p 25:25 -p 465:465 -p 587:587 `
-  -e "HOSTNAME=mail.localhost" `
-  -e "HTTPS=OFF" `
-  -v "${PWD}/maildata:/data" `
-  -v "${PWD}/mailstate:/state" `
-  -v "${PWD}/maillogs:/var/log" `
-  analogic/poste.io
+docker run --name posteio -p 25:25 -p 80:80 -p 443:443 -p 587:587 -p 993:993 -v /tmp/maildata:/data -e "HTTPS=OFF" -e "DISABLE_CLAMAV=TRUE" analogic/poste.io
+
 ```
 2. Créer les fichiers logs manquants dans le conteneur
 Le serveur Poste.io nécessite certains fichiers de logs pour démarrer correctement. Pour cela, exécutez les commandes suivantes après le démarrage du conteneur :
 
 ```bash
-docker exec mailserver mkdir -p /var/log/nginx
-docker exec mailserver touch /var/log/nginx/access.log
-docker exec mailserver touch /var/log/nginx/error.log
+docker exec posteio mkdir -p /var/log/nginx
+docker exec posteio touch /var/log/nginx/access.log
+docker exec posteio touch /var/log/nginx/error.log
 ```
 3. Accéder à l’interface d’administration
 Ouvre ton navigateur et rends-toi à l’adresse suivante pour initialiser le serveur mail :

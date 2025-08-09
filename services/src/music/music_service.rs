@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::CreateMusicRequest;
-use crate::UpdateMusicRequest;
+use crate::music::dto::CreateMusicRequest;
+use crate::music::dto::UpdateMusicRequest;
 use sea_orm::ActiveValue;
 use sea_orm::DatabaseConnection;
 use sea_orm::DbErr;
