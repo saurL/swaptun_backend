@@ -2354,9 +2354,10 @@ dependencies = [
  "nom",
  "percent-encoding",
  "quoted_printable",
+ "rustls 0.23.31",
  "socket2 0.6.0",
  "tokio",
- "tokio-native-tls",
+ "tokio-rustls 0.26.2",
  "url",
 ]
 
@@ -4816,16 +4817,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.104",
-]
-
-[[package]]
-name = "tokio-native-tls"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
-dependencies = [
- "native-tls",
- "tokio",
 ]
 
 [[package]]

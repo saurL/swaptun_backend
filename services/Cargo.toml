@@ -19,7 +19,8 @@ full = [
   "chrono",
   "actix-web",
   "ytmapi-rs",
-  "oauth2"
+  "oauth2",
+  "lettre"
 ]
 
 
@@ -54,7 +55,8 @@ lazy_static = { version = "1.5.0", optional = true }
 rspotify = { version = "0.14.0",    default-features = false,    features = ["client-reqwest", "reqwest-rustls-tls", "cli","env-file"] }
 google-fcm1 = "6.0.0"
 reqwest = { version = "0.11.27", default-features = false, features = ["json", "rustls-tls"] }
-lettre = { version = "0.11", features = ["tokio1", "tokio1-native-tls", "builder"] }
+lettre = { version = "0.11", features = ["tokio1", "tokio1-rustls", "builder"] ,optional=true }
+
 
 oauth2 =  {version = "5.0.0", optional= true }
 ytmapi-rs =  {git ="https://github.com/saurL/youtui.git", branch ="public-token", default-features = false,features= ["rustls-tls", "simplified-queries"],optional= true }
