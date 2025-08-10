@@ -3,13 +3,10 @@ use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, Validate, Clone)]
 pub struct MailRequest {
-    #[validate(nested)]
     pub to: Vec<String>,
 
-    #[validate(nested)]
     pub cc: Option<Vec<String>>,
 
-    #[validate(nested)]
     pub bcc: Option<Vec<String>>,
 
     #[validate(length(min = 1, message = "Subject is required"))]

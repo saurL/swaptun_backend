@@ -1,3 +1,5 @@
+#![allow(ambiguous_glob_reexports)]
+
 pub mod auth;
 pub mod deezer;
 
@@ -31,3 +33,5 @@ pub use notification::*;
 pub use yt_music::*;
 
 pub use swaptun_models::*;
+
+pub use mail::*;

@@ -3,7 +3,9 @@ use sea_orm::DbConn;
 
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
-use swaptun_services::{CreateUserRequest, GetUsersParams, UpdateUserRequest, UserBean, UserService};
+use swaptun_services::{
+    CreateUserRequest, GetUsersParams, UpdateUserRequest, UserBean, UserService,
+};
 
 pub fn configure_protected(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("").get(get_users))
@@ -127,7 +129,7 @@ pub async fn get_current_user(
 
     let user_service = UserService::new(db.get_ref().clone().into());
     let user = user_service.get_user_from_claims(claims).await?;
-    let user_bean :UserBean = user.into();
+    let user_bean: UserBean = user.into();
     Ok(HttpResponse::Ok().json(user_bean))
 }
 

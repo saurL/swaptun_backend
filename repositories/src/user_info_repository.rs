@@ -1,9 +1,12 @@
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
-    DeleteResult,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait,
+    QueryFilter,
 };
 use std::sync::Arc;
-use swaptun_models::{user_info::{Entity as UserInfoEntity, Model as UserInfoModel, ActiveModel as UserInfoActiveModel, Column as UserInfoColumn}};
+use swaptun_models::user_info::{
+    ActiveModel as UserInfoActiveModel, Column as UserInfoColumn, Entity as UserInfoEntity,
+    Model as UserInfoModel,
+};
 
 pub struct UserInfoRepository {
     db: Arc<DatabaseConnection>,
@@ -38,6 +41,8 @@ impl UserInfoRepository {
     }
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
-        UserInfoEntity::delete_by_id(id).exec(self.db.as_ref()).await
+        UserInfoEntity::delete_by_id(id)
+            .exec(self.db.as_ref())
+            .await
     }
 }

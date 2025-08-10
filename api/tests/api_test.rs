@@ -2,13 +2,10 @@
 mod tests {
     use actix_http::Request;
     use actix_service::Service;
-    use actix_web::{App, Error, dev::ServiceResponse, test, web};
+    use actix_web::{dev::ServiceResponse, test, web, App, Error};
     use serde_json;
     use swaptun_api::api;
-    use swaptun_services::{
-        TestDatabase,
-        dto::{CreateUserRequest, LoginRequest, UpdateUserRequest},
-    };
+    use swaptun_services::{CreateUserRequest, LoginRequest, TestDatabase, UpdateUserRequest};
 
     // Helper function pour obtenir un token JWT
     async fn authenticate_user(

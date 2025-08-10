@@ -34,9 +34,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 
 async fn get_user_playlists(
     db: web::Data<DbConn>,
-    req: HttpRequest,
     query: web::Json<GetPlaylistsParams>,
-    claims: web::ReqData<Claims>
+    claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let claims = claims.into_inner();
 

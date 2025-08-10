@@ -1,14 +1,4 @@
-use swaptun_services::mail::{MailRequest, MailService};
-
-#[tokio::test]
-async fn test_mail_service_creation() {
-    // This test will fail if the environment variables are not set
-    // It's meant to be run with proper SMTP configuration
-    /*
-    let mail_service = MailService::new();
-    assert!(mail_service.is_ok());
-    */
-}
+use swaptun_services::mail::MailRequest;
 
 #[test]
 fn test_mail_request_validation() {

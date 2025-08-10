@@ -1,16 +1,30 @@
-use actix_web::{HttpResponse, web};
+use actix_web::{web, HttpResponse};
 use sea_orm::DbConn;
 
 use swaptun_services::error::AppError;
 use swaptun_services::validators::user_validators::process_json_validation;
-use swaptun_services::{LoginEmailRequest, LoginRequest, UserService, VerifyTokenRequest};
+use swaptun_services::{
+    ForgotPasswordRequest, LoginEmailRequest, LoginRequest, UserService, VerifyTokenRequest,
+};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/login", web::post().to(login))
         .route("/login_email", web::post().to(login_email))
-        .route("/verify_token", web::post().to(verify_token));
+        .route("/verify_token", web::post().to(verify_token))
+        .route("/forgot_password", web::post().to(forgot_password));
 }
 
+async fn forgot_password(
+    db: web::Data<DbConn>,
+    req: web::Json<ForgotPasswordRequest>,
+) -> Result<HttpResponse, AppError> {
+    let user_service = UserService::new(db.get_ref().clone().into());
+    user_service.forgot_password(req.into_inner()).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "message": "If the email exists, a reset link has been sent."
+    })))
+}
 async fn login(
     db: web::Data<DbConn>,
     req: web::Json<LoginRequest>,

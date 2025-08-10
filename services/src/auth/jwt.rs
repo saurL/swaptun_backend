@@ -1,8 +1,8 @@
 use actix_web::error::ErrorUnauthorized;
-use actix_web::{Error, HttpMessage, dev};
+use actix_web::{dev, Error, HttpMessage};
 use chrono::{Duration, Utc};
-use futures::future::{Ready, ready};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode};
+use futures::future::{ready, Ready};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -83,9 +83,9 @@ pub fn generate_token(user: &Model) -> Result<String, AppError> {
         AppError::InternalServerError
     })
 }
-pub fn generate_token_expiration(user: &Model) -> Result<String, AppError> {
+pub fn generate_token_expiration(user: &Model, duration: Duration) -> Result<String, AppError> {
     let expiration = Utc::now()
-        .checked_add_signed(Duration::hours(24))
+        .checked_add_signed(duration)
         .expect("valid timestamp")
         .timestamp() as usize;
 

@@ -1,4 +1,4 @@
-use crate::mail::dto::{MailRequest, MailResponse};
+use crate::{error::AppError, MailRequest, MailResponse};
 use lettre::{
     message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
     AsyncTransport, Message, Tokio1Executor,
@@ -13,24 +13,44 @@ pub struct MailService {
 
 impl MailService {
     /// Creates a new instance of the MailService
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let smtp_host =
-            std::env::var("SMTP_HOST").map_err(|_| "SMTP_HOST environment variable not set")?;
+    pub fn new() -> Result<Self, AppError> {
+        let smtp_host = std::env::var("SMTP_HOST").map_err(|e| {
+            error!("SMTP_HOST environment variable not set: {}", e);
+            AppError::InternalServerError
+        })?;
         let smtp_port = std::env::var("SMTP_PORT")
-            .map_err(|_| "SMTP_PORT environment variable not set")?
+            .map_err(|e| {
+                error!("SMTP_PORT environment variable not set: {}", e);
+                AppError::InternalServerError
+            })?
             .parse::<u16>()
-            .map_err(|_| "SMTP_PORT must be a valid number")?;
-        let smtp_username = std::env::var("SMTP_USERNAME")
-            .map_err(|_| "SMTP_USERNAME environment variable not set")?;
-        let smtp_password = std::env::var("SMTP_PASSWORD")
-            .map_err(|_| "SMTP_PASSWORD environment variable not set")?;
-        let from_address = std::env::var("SMTP_FROM_ADDRESS")
-            .map_err(|_| "SMTP_FROM_ADDRESS environment variable not set")?;
-        let from_name = std::env::var("SMTP_FROM_NAME")
-            .map_err(|_| "SMTP_FROM_NAME environment variable not set")?;
+            .map_err(|e| {
+                error!("SMTP_PORT must be a valid number: {}", e);
+                AppError::InternalServerError
+            })?;
+        let smtp_username = std::env::var("SMTP_USERNAME").map_err(|e| {
+            error!("SMTP_USERNAME environment variable not set: {}", e);
+            AppError::InternalServerError
+        })?;
+        let smtp_password = std::env::var("SMTP_PASSWORD").map_err(|e| {
+            error!("SMTP_PASSWORD environment variable not set: {}", e);
+            AppError::InternalServerError
+        })?;
+        let from_address = std::env::var("SMTP_FROM_ADDRESS").map_err(|e| {
+            error!("SMTP_FROM_ADDRESS environment variable not set: {}", e);
+            AppError::InternalServerError
+        })?;
+        let from_name = std::env::var("SMTP_FROM_NAME").map_err(|e| {
+            error!("SMTP_FROM_NAME environment variable not set: {}", e);
+            AppError::InternalServerError
+        })?;
 
         let credentials = Credentials::new(smtp_username, smtp_password);
-        let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_host)?
+        let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp_host)
+            .map_err(|e| {
+                error!("Failed to create SMTP transport: {}", e);
+                AppError::InternalServerError
+            })?
             .credentials(credentials)
             .port(smtp_port)
             .build();

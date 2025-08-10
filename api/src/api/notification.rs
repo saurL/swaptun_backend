@@ -3,14 +3,9 @@ use log::{error, info};
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 use swaptun_services::{
-    auth::Claims,
-    dto::{
-        RegisterFcmTokenRequest, RegisterFcmTokenResponse, SendTestNotificationRequest,
-        SendTestNotificationResponse,
-    },
-    error::AppError,
-    notification::NotificationService,
-    validators::user_validators::process_validation_errors,
+    auth::Claims, error::AppError, notification::NotificationService,
+    validators::user_validators::process_validation_errors, RegisterFcmTokenRequest,
+    RegisterFcmTokenResponse, SendTestNotificationRequest, SendTestNotificationResponse,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

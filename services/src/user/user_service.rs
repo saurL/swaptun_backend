@@ -1,10 +1,12 @@
+use crate::auth::jwt::generate_token_expiration;
 use crate::auth::{generate_token, verify_password, Claims};
+use crate::mail::{MailRequest, MailService};
 use crate::validators::user_validators::process_validation_errors;
 use crate::{
     auth::{hash_password, validate_token},
     error::AppError,
 };
-use chrono::{Local, NaiveDateTime};
+use chrono::{Duration, Local, NaiveDateTime};
 use log::{info, warn};
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult};
 use std::sync::Arc;
@@ -12,8 +14,8 @@ use swaptun_models::{UserActiveModel, UserModel};
 use swaptun_repositories::UserRepository;
 
 use crate::{
-    CreateUserRequest, GetUsersParams, LoginEmailRequest, LoginRequest, LoginResponse,
-    UpdateUserRequest, VerifyTokenRequest, VerifyTokenResponse,
+    CreateUserRequest, ForgotPasswordRequest, GetUsersParams, LoginEmailRequest, LoginRequest,
+    LoginResponse, UpdateUserRequest, VerifyTokenRequest, VerifyTokenResponse,
 };
 
 pub struct UserService {
@@ -359,5 +361,57 @@ impl UserService {
                 claims.user_id
             ))),
         }
+    }
+
+    pub async fn forgot_password(&self, req: ForgotPasswordRequest) -> Result<(), AppError> {
+        // Find user by email
+        let user = match self.find_by_email(req.email.clone()).await? {
+            Some(user) => user,
+            None => return Ok(()), // Do not disclose if email exists
+        };
+
+        // Create mail service
+        let mail_service = MailService::new()?;
+
+        let token = generate_token_expiration(&user, Duration::minutes(10))?;
+        // Create reset link (in a real application, this would be a secure token)
+        let reset_link = format!("https://swaptun.com/reset-password?token={}", token);
+
+        // Load HTML template
+        let html_template = include_str!("../mail/templates/password_reset.html");
+
+        // Replace placeholders with actual values
+        let html_body = html_template
+            .replace("{{first_name}}", &user.first_name)
+            .replace("{{reset_link}}", &reset_link);
+
+        // Create password reset email
+        let mail_request = MailRequest {
+            to: vec![user.email.clone()],
+            cc: None,
+            bcc: None,
+            subject: "Password Reset Request".to_string(),
+            body: html_body,
+            is_html: true,
+        };
+
+        // Send the email
+        let mail_result = match mail_service.send_mail(mail_request).await {
+            Ok(result) => result,
+            Err(err) => {
+                log::error!("Error sending password reset email: {}", err);
+                return Err(AppError::InternalServerError);
+            }
+        };
+
+        if !mail_result.success {
+            log::error!(
+                "Failed to send password reset email: {:?}",
+                mail_result.error
+            );
+            return Err(AppError::InternalServerError);
+        }
+
+        Ok(())
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(feature = "full")]
-mod spotify;
+pub mod spotify;
 
 #[cfg(feature = "full")]
 pub use spotify::*;
