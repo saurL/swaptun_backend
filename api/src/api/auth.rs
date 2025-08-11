@@ -11,7 +11,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/login", web::post().to(login))
         .route("/login_email", web::post().to(login_email))
         .route("/verify_token", web::post().to(verify_token))
-        .route("/forgot_password", web::post().to(forgot_password));
+        .route("/forgot-password", web::post().to(forgot_password));
 }
 
 async fn forgot_password(

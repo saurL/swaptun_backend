@@ -2,6 +2,7 @@ use crate::auth::UserRole;
 use crate::error::AppError;
 #[cfg(feature = "full")]
 use actix_web::web;
+use log::error;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use validator::{Validate, ValidationError, ValidationErrors};
@@ -25,6 +26,10 @@ pub fn validate_password(password: &str) -> Result<(), ValidationError> {
         let mut error = ValidationError::new("invalid_password_format");
         println!("Password: {}", password);
         error.message = Some("Password must be 10-20 characters and must contain lower and upper letters, numbers, and special characters (@$!%*?&)".into());
+        error!(
+            "Password validation failed: {}",
+            error.message.as_ref().unwrap()
+        );
         return Err(error);
     }
 
