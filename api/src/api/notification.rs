@@ -6,6 +6,7 @@ use swaptun_services::{
     auth::Claims, error::AppError, notification::NotificationService,
     validators::user_validators::process_validation_errors, RegisterFcmTokenRequest,
     RegisterFcmTokenResponse, SendTestNotificationRequest, SendTestNotificationResponse,
+    UserService,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -27,7 +28,7 @@ pub async fn register_fcm_token(
     // Récupération de la clé serveur depuis les variables d'environnement
 
     // Création du service de notification
-    let notification_service = NotificationService::new(Arc::new(db.get_ref().clone())).await?;
+    let notification_service = UserService::new(Arc::new(db.get_ref().clone()));
 
     // Enregistrement du token FCM
     match notification_service

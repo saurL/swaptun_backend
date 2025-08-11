@@ -20,7 +20,6 @@ async fn forgot_password(
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
     user_service.forgot_password(req.into_inner()).await?;
-
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "If the email exists, a reset link has been sent."
     })))
