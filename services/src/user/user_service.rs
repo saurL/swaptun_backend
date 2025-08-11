@@ -11,7 +11,7 @@ use log::{info, warn};
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult};
 use std::sync::Arc;
 use swaptun_models::{UserActiveModel, UserModel};
-use swaptun_repositories::UserRepository;
+use swaptun_repositories::{FcmTokenRepository, UserRepository};
 
 use crate::{
     CreateUserRequest, ForgotPasswordRequest, GetUsersParams, LoginEmailRequest, LoginRequest,
@@ -20,12 +20,14 @@ use crate::{
 
 pub struct UserService {
     user_repository: UserRepository,
+    fcm_token_repository: FcmTokenRepository,
 }
 
 impl UserService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         UserService {
-            user_repository: UserRepository::new(db),
+            user_repository: UserRepository::new(db.clone()),
+            fcm_token_repository: FcmTokenRepository::new(db),
         }
     }
 
@@ -458,5 +460,19 @@ impl UserService {
             log::error!("Error saving user: {}", e);
             AppError::InternalServerError
         })
+    }
+
+    pub async fn register_fcm_token(
+        &self,
+        user_id: i32,
+        token: String,
+        device_id: Option<String>,
+        platform: Option<String>,
+    ) -> Result<(), AppError> {
+        self.fcm_token_repository
+            .upsert_token(user_id, token, device_id, platform)
+            .await
+            .map_err(AppError::from)?;
+        Ok(())
     }
 }

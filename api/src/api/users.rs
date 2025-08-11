@@ -15,15 +15,15 @@ pub fn configure_protected(cfg: &mut web::ServiceConfig) {
                 .get(get_current_user)
                 .put(update_current_user),
         )
+        .service(web::resource("/reset-password").post(reset_password))
         .service(
-            web::resource("/{id}")
+            web::resource("/{id:\\d+}")
                 .get(get_user)
                 .put(update_user)
                 .delete(delete_user_physical),
         )
-        .service(web::resource("/{id}/soft-delete").patch(delete_user_logical))
-        .service(web::resource("/{id}/restore").patch(restore_user))
-        .service(web::resource("/reset-password").post(reset_password));
+        .service(web::resource("/{id:\\d+}/soft-delete").patch(delete_user_logical))
+        .service(web::resource("/{id:\\d+}/restore").patch(restore_user));
 }
 
 pub fn configure_public(cfg: &mut web::ServiceConfig) {

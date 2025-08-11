@@ -67,6 +67,7 @@ pub async fn main() -> io::Result<()> {
 }
 
 /// Test the mail service connection at startup
+#[cfg(feature = "full")]
 async fn test_mail_service_connection() {
     let service =
         swaptun_services::mail::MailService::new().expect("Failed to create mail service");
@@ -76,6 +77,7 @@ async fn test_mail_service_connection() {
         .expect("Failed to connect to the mail service");
 }
 
+#[cfg(feature = "full")]
 async fn test_notification_service_connection(db: DbConn) {
     swaptun_services::notification::NotificationService::new(db.into())
         .await

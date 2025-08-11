@@ -3,8 +3,10 @@ mod tests {
     use actix_http::Request;
     use actix_service::Service;
     use actix_web::{dev::ServiceResponse, test, web, App, Error};
+    use chrono::Duration;
     use serde_json;
     use swaptun_api::api;
+    use swaptun_services::auth::jwt::generate_token_expiration;
     use swaptun_services::{
         CreateUserRequest, GetUsersParams, ResetPasswordRequest, TestDatabase, UpdateUserRequest,
     };
@@ -294,9 +296,70 @@ mod tests {
 
         test_db.drop().await;
     }
+    #[actix_web::test]
+    async fn test_forgot_password_success() {
+        let test_db = TestDatabase::new().await;
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_db.get_db()))
+                .configure(|config| api::configure_routes(config, test_db.get_db_raw())),
+        )
+        .await;
+
+        let forgot_request = swaptun_services::ForgotPasswordRequest {
+            email: "anyuser@gmail.com".to_string(),
+        };
+        let req = test::TestRequest::post()
+            .uri("/api/auth/forgot_password")
+            .set_json(&forgot_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+    }
 
     #[actix_web::test]
     async fn test_users_reset_password_success() {
+        let test_db = TestDatabase::new().await;
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_db.get_db()))
+                .configure(|config| api::configure_routes(config, test_db.get_db_raw())),
+        )
+        .await;
+
+        // In a real scenario, we would extract the token from the email
+        // For testing purposes, we'll simulate the token generation
+        // Since we can't easily extract the token from the email in tests,
+        // we'll create a valid token with expiration using the same logic as the service
+
+        // Get the default user from the test database
+        let user_service = swaptun_services::UserService::new(test_db.get_db());
+        let user = user_service.get_user(1).await.unwrap().unwrap();
+
+        // Generate a token with expiration (same as forgot_password service)
+        let reset_token = generate_token_expiration(&user, Duration::minutes(10)).unwrap();
+
+        let reset_request = ResetPasswordRequest {
+            password: "NewValidPass123!".to_string(),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/users/reset-password")
+            .insert_header(("Authorization", format!("Bearer {}", reset_token)))
+            .set_json(&reset_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        // This should succeed with the valid reset token
+        println!("Reset Password Response: {:?}", resp);
+        assert!(resp.status().is_success());
+
+        test_db.drop().await;
+    }
+
+    #[actix_web::test]
+    async fn test_users_reset_password_error() {
         let test_db = TestDatabase::new().await;
         let app = test::init_service(
             App::new()
@@ -320,7 +383,7 @@ mod tests {
 
         let resp = test::call_service(&app, req).await;
         // This might fail due to token validation in test environment, but we're testing the endpoint
-        assert!(resp.status().is_client_error() || resp.status().is_success());
+        assert!(resp.status().is_client_error());
 
         test_db.drop().await;
     }

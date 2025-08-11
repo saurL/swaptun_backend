@@ -10,11 +10,13 @@ pub mod musicbrainz;
 pub mod notification;
 pub mod playlist;
 pub mod spotify;
+#[cfg(feature = "full")]
 pub mod test;
 pub mod user;
 pub mod user_info;
 pub mod validators;
 pub mod yt_music;
+#[cfg(feature = "full")]
 pub use test::*;
 
 pub use deezer::*;
