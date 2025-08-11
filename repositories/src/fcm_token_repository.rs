@@ -44,14 +44,11 @@ impl FcmTokenRepository {
             .await
     }
 
-    pub async fn find_active_by_user_id(
-        &self,
-        user_id: i32,
-    ) -> Result<Option<FcmTokenModel>, DbErr> {
+    pub async fn find_active_by_user_id(&self, user_id: i32) -> Result<Vec<FcmTokenModel>, DbErr> {
         FcmTokenEntity::find()
             .filter(FcmTokenColumn::UserId.eq(user_id))
             .filter(FcmTokenColumn::IsActive.eq(true))
-            .one(self.db.as_ref())
+            .all(self.db.as_ref())
             .await
     }
 

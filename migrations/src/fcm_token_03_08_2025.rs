@@ -50,12 +50,6 @@ impl MigrationTrait for Migration {
                     )
                     .index(
                         Index::create()
-                            .name("idx_fcm_token_user_id")
-                            .col(TblFcmTokens::UserId)
-                            .unique(),
-                    )
-                    .index(
-                        Index::create()
                             .name("idx_fcm_token_token")
                             .col(TblFcmTokens::Token)
                             .unique(),

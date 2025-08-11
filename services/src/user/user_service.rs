@@ -414,4 +414,49 @@ impl UserService {
 
         Ok(())
     }
+
+    pub async fn reset_password(
+        &self,
+        claims: Claims,
+        new_password: String,
+    ) -> Result<(), AppError> {
+        // Validate the token
+        let now_timestamp = Local::now().timestamp() as usize;
+        if let Some(expiration) = claims.exp {
+            if expiration < now_timestamp {
+                return Err(AppError::Unauthorized("Token has expired".into()));
+            }
+        } else {
+            return Err(AppError::Unauthorized("Token is invalid".into()));
+        }
+
+        // Find user by ID from claims
+        let user = match self.find_by_id(claims.user_id).await? {
+            Some(user) => user,
+            None => {
+                return Err(AppError::NotFound(format!(
+                    "User with ID {} not found",
+                    claims.user_id
+                )))
+            }
+        };
+
+        // Hash the new password
+        let hashed_password = hash_password(&new_password)?;
+
+        // Update user's password
+        let mut active_model: UserActiveModel = user.into();
+        active_model.password = Set(hashed_password);
+        active_model.updated_on = Set(Local::now().naive_local());
+
+        self.save(active_model).await?;
+
+        Ok(())
+    }
+    pub async fn save(&self, user: UserActiveModel) -> Result<UserActiveModel, AppError> {
+        self.user_repository.save(user).await.map_err(|e| {
+            log::error!("Error saving user: {}", e);
+            AppError::InternalServerError
+        })
+    }
 }

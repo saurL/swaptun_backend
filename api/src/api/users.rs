@@ -4,7 +4,8 @@ use sea_orm::DbConn;
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
-    CreateUserRequest, GetUsersParams, UpdateUserRequest, UserBean, UserService,
+    CreateUserRequest, GetUsersParams, ResetPasswordRequest, UpdateUserRequest, UserBean,
+    UserService,
 };
 
 pub fn configure_protected(cfg: &mut web::ServiceConfig) {
@@ -21,7 +22,8 @@ pub fn configure_protected(cfg: &mut web::ServiceConfig) {
                 .delete(delete_user_physical),
         )
         .service(web::resource("/{id}/soft-delete").patch(delete_user_logical))
-        .service(web::resource("/{id}/restore").patch(restore_user));
+        .service(web::resource("/{id}/restore").patch(restore_user))
+        .service(web::resource("/reset-password").post(reset_password));
 }
 
 pub fn configure_public(cfg: &mut web::ServiceConfig) {
@@ -148,6 +150,30 @@ pub async fn update_current_user(
     let user_service = UserService::new(db.get_ref().clone().into());
     let updated_user = user_service
         .update_user(update_data.into_inner(), claims.user_id)
+        .await?;
+
+    Ok(HttpResponse::Ok().json(updated_user))
+}
+
+pub async fn reset_password(
+    db: web::Data<DbConn>,
+    request: web::Json<ResetPasswordRequest>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    // Get claims from request extensions that were set by auth middleware
+    if let Some(expiration) = claims.exp {
+        if expiration < chrono::Utc::now().timestamp() as usize {
+            return Err(AppError::Unauthorized("Token has expired".to_string()));
+        }
+    } else {
+        return Err(AppError::Unauthorized(
+            "No authentication token found".to_string(),
+        ));
+    }
+    let req = request.into_inner();
+    let user_service = UserService::new(db.get_ref().clone().into());
+    let updated_user = user_service
+        .reset_password(claims.into_inner(), req.password)
         .await?;
 
     Ok(HttpResponse::Ok().json(updated_user))

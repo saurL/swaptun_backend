@@ -61,7 +61,11 @@ impl MailService {
             from_name,
         })
     }
-
+    pub async fn test_connection(&self) -> Result<bool, lettre::transport::smtp::Error> {
+        // This method can be used to test the connection to the SMTP server
+        // For now, we just return Ok if the mailer is initialized
+        self.mailer.test_connection().await
+    }
     /// Sends a single email
     pub async fn send_mail(
         &self,

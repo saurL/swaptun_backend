@@ -1,7 +1,7 @@
+use sea_orm::{prelude::*, DeleteResult};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
 };
-use sea_orm::{DeleteResult, prelude::*};
 use std::sync::Arc;
 use swaptun_models::{UserActiveModel, UserColumn, UserEntity, UserModel};
 
@@ -80,5 +80,8 @@ impl UserRepository {
         } else {
             Ok(None)
         }
+    }
+    pub async fn save(&self, model: UserActiveModel) -> Result<UserActiveModel, DbErr> {
+        model.save(self.db.as_ref()).await
     }
 }

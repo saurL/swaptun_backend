@@ -446,14 +446,13 @@ impl NotificationService {
     }
 
     /// Récupère le token FCM actif d'un utilisateur
-    pub async fn get_user_fcm_token(&self, user_id: i32) -> Result<Option<String>, AppError> {
+    pub async fn get_user_fcm_token(&self, user_id: i32) -> Result<Vec<String>, AppError> {
         match self
             .fcm_token_repository
             .find_active_by_user_id(user_id)
             .await
         {
-            Ok(Some(token_model)) => Ok(Some(token_model.token)),
-            Ok(None) => Ok(None),
+            Ok(tokens) => Ok(tokens.into_iter().map(|t| t.token).collect()),
             Err(e) => Err(AppError::from(e)),
         }
     }
@@ -473,25 +472,24 @@ impl NotificationService {
         title: String,
         body: String,
         data: Option<std::collections::HashMap<String, String>>,
-    ) -> Result<NotificationResponse, AppError> {
-        if let Some(token) = self.get_user_fcm_token(user_id).await? {
+    ) -> Result<Vec<NotificationResponse>, AppError> {
+        let tokens = self.get_user_fcm_token(user_id).await?;
+        let mut responses = Vec::new();
+        for token in tokens {
             let request = NotificationRequest {
                 token,
-                title,
-                body,
-                data,
+                title: title.clone(),
+                body: body.clone(),
+                data: data.clone(),
                 image: None,
                 sound: None,
                 badge: None,
                 click_action: None,
                 priority: Some(NotificationPriority::Normal),
             };
-            self.send_notification(request).await
-        } else {
-            Err(AppError::NotFound(format!(
-                "No FCM token found for user {}",
-                user_id
-            )))
+            let response = self.send_notification(request).await?;
+            responses.push(response);
         }
+        Ok(responses)
     }
 }

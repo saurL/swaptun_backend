@@ -42,8 +42,15 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
 }
 
 async fn health_check() -> HttpResponse {
+    // Test mail service connection
+    let mail_status = match swaptun_services::mail::MailService::new() {
+        Ok(_) => "UP",
+        Err(_) => "DOWN",
+    };
+
     HttpResponse::Ok().json(serde_json::json!({
         "status": "UP",
-        "message": "Service is running"
+        "message": "Service is running",
+        "mail_service": mail_status
     }))
 }

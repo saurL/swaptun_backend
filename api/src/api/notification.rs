@@ -91,29 +91,27 @@ pub async fn send_test_notification(
         )
         .await
     {
-        Ok(response) => {
-            if response.success {
-                info!(
-                    "Test notification sent successfully to user {}",
-                    request.user_id
-                );
-                Ok(HttpResponse::Ok().json(SendTestNotificationResponse {
-                    success: true,
-                    message: "Test notification sent successfully".to_string(),
-                    notification_sent: true,
-                }))
-            } else {
-                error!(
-                    "Failed to send test notification to user {}: {:?}",
-                    request.user_id, response.error
-                );
-                Ok(HttpResponse::Ok().json(SendTestNotificationResponse {
-                    success: false,
-                    message: "Failed to send notification".to_string(),
-                    notification_sent: false,
-                }))
+        Ok(responses) => {
+            for response in responses {
+                if response.success {
+                    info!(
+                        "Test notification sent successfully to user {}",
+                        request.user_id
+                    );
+                } else {
+                    error!(
+                        "Failed to send test notification to user {}: {:?}",
+                        request.user_id, response.error
+                    );
+                }
             }
+            Ok(HttpResponse::Ok().json(SendTestNotificationResponse {
+                success: true,
+                message: "Test notification sent successfully".to_string(),
+                notification_sent: true,
+            }))
         }
+
         Err(AppError::NotFound(msg)) => {
             info!("No FCM token found for user {}: {}", request.user_id, msg);
             Ok(HttpResponse::Ok().json(SendTestNotificationResponse {
