@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use swaptun_models::UserBean;
 use validator::Validate;
 
 use crate::{
@@ -76,8 +77,7 @@ pub struct LoginEmailRequest {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct LoginResponse {
     pub token: String,
-    pub user_id: i32,
-    pub username: String,
+    pub user: UserBean,
     pub role: String,
 }
 #[derive(Deserialize, Serialize, Debug)]

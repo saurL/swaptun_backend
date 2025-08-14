@@ -327,7 +327,7 @@ pub async fn test_authentication_success_token_sent() {
     assert!(result.is_ok());
     let auth_response = result.unwrap();
     assert!(!auth_response.token.is_empty());
-    assert_eq!(auth_response.username, "auth_user");
+    assert_eq!(auth_response.user.username, "auth_user");
 
     test_db.drop().await;
 }
@@ -358,7 +358,7 @@ pub async fn test_authentication_and_token_verification_success() {
     assert!(login_result.is_ok());
     let auth_response = login_result.unwrap();
     assert!(!auth_response.token.is_empty());
-    assert_eq!(auth_response.username, "token_user");
+    assert_eq!(auth_response.user.username, "token_user");
 
     // Vérifie le jeton
     let token_verification_request = VerifyTokenRequest {
@@ -401,7 +401,7 @@ pub async fn test_authentication_with_email_success() {
     assert!(result.is_ok());
     let auth_response = result.unwrap();
     assert!(!auth_response.token.is_empty());
-    assert_eq!(auth_response.username, "email_auth_user");
+    assert_eq!(auth_response.user.username, "email_auth_user");
     let token_verification_request = VerifyTokenRequest {
         token: auth_response.token.clone(),
     };

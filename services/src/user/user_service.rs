@@ -153,8 +153,7 @@ impl UserService {
 
         Ok(LoginResponse {
             token,
-            user_id: user.id,
-            username: user.username,
+            user: user.clone().into(),
             role: user.role,
         })
     }
@@ -343,8 +342,7 @@ impl UserService {
 
         Ok(LoginResponse {
             token,
-            user_id: user.id,
-            username: user.username,
+            user: user.clone().into(),
             role: user.role,
         })
     }
