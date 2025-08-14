@@ -1,4 +1,6 @@
-use sea_orm::{prelude::*, DeleteResult};
+use log::info;
+use sea_orm::metric::Info;
+use sea_orm::{prelude::*, DeleteResult, Order, QueryOrder};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
     QuerySelect, Set,
@@ -103,24 +105,20 @@ impl UserRepository {
 
         // Build the search condition
         if let (Some(field), Some(search_term)) = (search_fields, search_term) {
-            let condition = match field {
-                UserColumn::Username => {
-                    Expr::cust_with_values::<&str, _, _>("username % ?", vec![search_term])
-                }
-                UserColumn::FirstName => {
-                    Expr::cust_with_values::<&str, _, _>("first_name % ?", vec![search_term])
-                }
-                UserColumn::LastName => {
-                    Expr::cust_with_values::<&str, _, _>("last_name % ?", vec![search_term])
-                }
-                UserColumn::Email => {
-                    Expr::cust_with_values::<&str, _, _>("email % ?", vec![search_term])
-                }
+            let field = match field {
+                UserColumn::Username => "username",
+                UserColumn::FirstName => "first_name",
+                UserColumn::LastName => "last_name",
+                UserColumn::Email => "email",
                 _ => {
                     return Err(DbErr::Custom("Invalid search field".to_string()));
                 }
             };
-            query = query.filter(condition);
+            let condition =
+                Expr::cust_with_values::<&str, _, _>(&format!("{} % ?", field), vec![search_term]);
+            let order_by = Expr::cust(format!("similarity(username, {})", field));
+            query = query.filter(condition).order_by(order_by, Order::Desc);
+            info!("Using custom querry query: {:?}", query);
         }
 
         // Apply limit and offset

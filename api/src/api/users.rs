@@ -1,4 +1,5 @@
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse};
+use log::info;
 use sea_orm::DbConn;
 
 use swaptun_services::auth::Claims;
@@ -35,7 +36,7 @@ pub async fn get_users(
     query: web::Query<GetUsersRequest>,
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
-
+    info!("get User Request in api: {:?}", query);
     let users = user_service.get_users(query.into_inner()).await?;
     let users_bean: Vec<UserBean> = users.into_iter().map(|user| user.into()).collect();
     Ok(HttpResponse::Ok().json(users_bean))

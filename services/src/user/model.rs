@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use swaptun_models::UserColumn;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum SearchField {
     Username,
     FirstName,
@@ -12,9 +13,9 @@ pub enum SearchField {
 impl SearchField {
     pub fn as_str(&self) -> &'static str {
         match self {
-            SearchField::Username => "username",
-            SearchField::FirstName => "first_name",
-            SearchField::LastName => "last_name",
+            SearchField::Username => "userName",
+            SearchField::FirstName => "firstName",
+            SearchField::LastName => "lastName",
             SearchField::Email => "email",
         }
     }
