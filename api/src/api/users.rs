@@ -33,7 +33,7 @@ pub fn configure_public(cfg: &mut web::ServiceConfig) {
 
 pub async fn get_users(
     db: web::Data<DbConn>,
-    query: web::Query<GetUsersRequest>,
+    query: web::Json<GetUsersRequest>,
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
     info!("get User Request in api: {:?}", query);
