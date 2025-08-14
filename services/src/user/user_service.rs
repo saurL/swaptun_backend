@@ -112,7 +112,18 @@ impl UserService {
 
     pub async fn get_users(&self, request: GetUsersParams) -> Result<Vec<UserModel>, DbErr> {
         let include_deleted = request.include_deleted.unwrap_or(false);
-        let users = self.find_all(include_deleted).await?;
+
+        let users = self
+            .user_repository
+            .search_users(
+                request.search,
+                request.search_field.map(|f| f.into()),
+                include_deleted,
+                request.limit,
+                request.offset,
+            )
+            .await?;
+
         Ok(users)
     }
 

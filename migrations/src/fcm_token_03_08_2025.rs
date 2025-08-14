@@ -48,12 +48,6 @@ impl MigrationTrait for Migration {
                             .to(TblUsers::Table, TblUsers::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
-                    .index(
-                        Index::create()
-                            .name("idx_fcm_token_token")
-                            .col(TblFcmTokens::Token)
-                            .unique(),
-                    )
                     .to_owned(),
             )
             .await

@@ -1,6 +1,7 @@
 use sea_orm::{prelude::*, DeleteResult};
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
+    QuerySelect, Set,
 };
 use std::sync::Arc;
 use swaptun_models::{UserActiveModel, UserColumn, UserEntity, UserModel};
@@ -83,5 +84,53 @@ impl UserRepository {
     }
     pub async fn save(&self, model: UserActiveModel) -> Result<UserActiveModel, DbErr> {
         model.save(self.db.as_ref()).await
+    }
+
+    pub async fn search_users(
+        &self,
+        search_term: Option<String>,
+        search_fields: Option<UserColumn>,
+        include_deleted: bool,
+        limit: Option<u64>,
+        offset: Option<u64>,
+    ) -> Result<Vec<UserModel>, DbErr> {
+        let mut query = UserEntity::find();
+
+        // Apply deleted filter if needed
+        if !include_deleted {
+            query = query.filter(UserColumn::DeletedOn.is_null());
+        }
+
+        // Build the search condition
+        if let (Some(field), Some(search_term)) = (search_fields, search_term) {
+            let condition = match field {
+                UserColumn::Username => {
+                    Expr::cust_with_values::<&str, _, _>("username % ?", vec![search_term])
+                }
+                UserColumn::FirstName => {
+                    Expr::cust_with_values::<&str, _, _>("first_name % ?", vec![search_term])
+                }
+                UserColumn::LastName => {
+                    Expr::cust_with_values::<&str, _, _>("last_name % ?", vec![search_term])
+                }
+                UserColumn::Email => {
+                    Expr::cust_with_values::<&str, _, _>("email % ?", vec![search_term])
+                }
+                _ => {
+                    return Err(DbErr::Custom("Invalid search field".to_string()));
+                }
+            };
+            query = query.filter(condition);
+        }
+
+        // Apply limit and offset
+        if let Some(limit) = limit {
+            query = query.limit(limit);
+        }
+        if let Some(offset) = offset {
+            query = query.offset(offset);
+        }
+
+        query.all(self.db.as_ref()).await
     }
 }

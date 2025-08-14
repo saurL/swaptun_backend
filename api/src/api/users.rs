@@ -23,7 +23,7 @@ pub fn configure_protected(cfg: &mut web::ServiceConfig) {
                 .delete(delete_user_physical),
         )
         .service(web::resource("/{id:\\d+}/soft-delete").patch(delete_user_logical))
-        .service(web::resource("/{id:\\d+}/restore").patch(restore_user));
+        .service(web::resource("/{id:\\d+ }/restore").patch(restore_user));
 }
 
 pub fn configure_public(cfg: &mut web::ServiceConfig) {

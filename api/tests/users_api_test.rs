@@ -310,7 +310,7 @@ mod tests {
             email: "anyuser@gmail.com".to_string(),
         };
         let req = test::TestRequest::post()
-            .uri("/api/auth/forgot_password")
+            .uri("/api/auth/forgot-password")
             .set_json(&forgot_request)
             .to_request();
 

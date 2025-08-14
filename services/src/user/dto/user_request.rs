@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::validators::user_validators::{validate_no_spaces, validate_password};
+use crate::{
+    model::SearchField,
+    validators::user_validators::{validate_no_spaces, validate_password},
+};
 
 #[derive(Deserialize, Serialize, Validate)]
 pub struct UpdateUserRequest {
@@ -22,6 +25,10 @@ pub struct UpdateUserRequest {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct GetUsersParams {
     pub include_deleted: Option<bool>,
+    pub search: Option<String>,
+    pub search_field: Option<SearchField>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]

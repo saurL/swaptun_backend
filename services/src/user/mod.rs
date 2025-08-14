@@ -6,3 +6,4 @@ pub use user_service::*;
 
 pub mod dto;
 pub use dto::*;
+pub mod model;
