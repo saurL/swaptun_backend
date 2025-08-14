@@ -8,7 +8,7 @@ mod tests {
     use swaptun_api::api;
     use swaptun_services::auth::jwt::generate_token_expiration;
     use swaptun_services::{
-        CreateUserRequest, GetUsersParams, ResetPasswordRequest, TestDatabase, UpdateUserRequest,
+        CreateUserRequest, GetUsersRequest, ResetPasswordRequest, TestDatabase, UpdateUserRequest,
     };
 
     // Helper function to authenticate user and get token
@@ -112,7 +112,7 @@ mod tests {
         // Authenticate to get token
         let token = authenticate_user(&app).await;
 
-        let get_users_params = GetUsersParams {
+        let get_users_params = GetUsersRequest {
             include_deleted: Some(false),
         };
 

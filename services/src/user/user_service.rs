@@ -14,7 +14,7 @@ use swaptun_models::{UserActiveModel, UserModel};
 use swaptun_repositories::{FcmTokenRepository, UserRepository};
 
 use crate::{
-    CreateUserRequest, ForgotPasswordRequest, GetUsersParams, LoginEmailRequest, LoginRequest,
+    CreateUserRequest, ForgotPasswordRequest, GetUsersRequest, LoginEmailRequest, LoginRequest,
     LoginResponse, UpdateUserRequest, VerifyTokenRequest, VerifyTokenResponse,
 };
 
@@ -110,7 +110,7 @@ impl UserService {
         Ok(user)
     }
 
-    pub async fn get_users(&self, request: GetUsersParams) -> Result<Vec<UserModel>, DbErr> {
+    pub async fn get_users(&self, request: GetUsersRequest) -> Result<Vec<UserModel>, DbErr> {
         let include_deleted = request.include_deleted.unwrap_or(false);
 
         let users = self

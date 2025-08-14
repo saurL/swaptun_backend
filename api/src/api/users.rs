@@ -4,7 +4,7 @@ use sea_orm::DbConn;
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
-    CreateUserRequest, GetUsersParams, ResetPasswordRequest, UpdateUserRequest, UserBean,
+    user, CreateUserRequest, GetUsersRequest, ResetPasswordRequest, UpdateUserRequest, UserBean,
     UserService,
 };
 
@@ -32,13 +32,13 @@ pub fn configure_public(cfg: &mut web::ServiceConfig) {
 
 pub async fn get_users(
     db: web::Data<DbConn>,
-    query: web::Query<GetUsersParams>,
+    query: web::Query<GetUsersRequest>,
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
 
     let users = user_service.get_users(query.into_inner()).await?;
-
-    Ok(HttpResponse::Ok().json(users))
+    let users_bean: Vec<UserBean> = users.into_iter().map(|user| user.into()).collect();
+    Ok(HttpResponse::Ok().json(users_bean))
 }
 
 pub async fn get_user(

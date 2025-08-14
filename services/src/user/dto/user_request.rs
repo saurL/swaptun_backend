@@ -23,7 +23,7 @@ pub struct UpdateUserRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct GetUsersParams {
+pub struct GetUsersRequest {
     pub include_deleted: Option<bool>,
     pub search: Option<String>,
     pub search_field: Option<SearchField>,
