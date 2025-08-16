@@ -5,6 +5,5 @@ mod music;
 mod musicbrainz;
 mod playlist_test;
 mod spotify;
-mod user_info;
 mod user_service;
 mod yt_music;

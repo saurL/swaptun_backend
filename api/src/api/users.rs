@@ -5,8 +5,8 @@ use sea_orm::DbConn;
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
-    user, CreateUserRequest, GetUsersRequest, ResetPasswordRequest, UpdateUserRequest, UserBean,
-    UserService,
+    AddFriendRequest, CreateUserRequest, GetUsersRequest, RemoveFriendRequest,
+    ResetPasswordRequest, UpdateUserRequest, UserBean, UserService,
 };
 
 pub fn configure_protected(cfg: &mut web::ServiceConfig) {
@@ -17,6 +17,9 @@ pub fn configure_protected(cfg: &mut web::ServiceConfig) {
                 .put(update_current_user),
         )
         .service(web::resource("/reset-password").post(reset_password))
+        .service(web::resource("/friends").get(get_friends))
+        .service(web::resource("/friends/add").post(add_friend))
+        .service(web::resource("/friends/remove").post(remove_friend))
         .service(
             web::resource("/{id:\\d+}")
                 .get(get_user)
@@ -34,10 +37,13 @@ pub fn configure_public(cfg: &mut web::ServiceConfig) {
 pub async fn get_users(
     db: web::Data<DbConn>,
     query: web::Json<GetUsersRequest>,
+    claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
     info!("get User Request in api: {:?}", query);
-    let users = user_service.get_users(query.into_inner()).await?;
+    let users = user_service
+        .get_users(claims.user_id, query.into_inner())
+        .await?;
     let users_bean: Vec<UserBean> = users.into_iter().map(|user| user.into()).collect();
     Ok(HttpResponse::Ok().json(users_bean))
 }
@@ -156,6 +162,42 @@ pub async fn update_current_user(
     Ok(HttpResponse::Ok().json(updated_user))
 }
 
+pub async fn get_friends(
+    db: web::Data<DbConn>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let user_service = UserService::new(db.get_ref().clone().into());
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+    let friends = user_service.get_friends(&user).await?;
+    let friends_bean: Vec<UserBean> = friends.into_iter().map(|user| user.into()).collect();
+    Ok(HttpResponse::Ok().json(friends_bean))
+}
+
+pub async fn add_friend(
+    db: web::Data<DbConn>,
+    request: web::Json<AddFriendRequest>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let user_service = UserService::new(db.get_ref().clone().into());
+    user_service
+        .add_friend(claims.user_id, request.friend_id)
+        .await?;
+    Ok(HttpResponse::Ok().json("Friend added successfully"))
+}
+
+pub async fn remove_friend(
+    db: web::Data<DbConn>,
+    request: web::Json<RemoveFriendRequest>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let user_service = UserService::new(db.get_ref().clone().into());
+    user_service
+        .remove_friend(claims.user_id, request.friend_id)
+        .await?;
+    Ok(HttpResponse::Ok().json("Friend removed successfully"))
+}
 pub async fn reset_password(
     db: web::Data<DbConn>,
     request: web::Json<ResetPasswordRequest>,

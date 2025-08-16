@@ -8,7 +8,8 @@ mod tests {
     use swaptun_api::api;
     use swaptun_services::auth::jwt::generate_token_expiration;
     use swaptun_services::{
-        CreateUserRequest, GetUsersRequest, ResetPasswordRequest, TestDatabase, UpdateUserRequest,
+        AddFriendRequest, CreateUserRequest, GetUsersRequest, RemoveFriendRequest,
+        ResetPasswordRequest, TestDatabase, UpdateUserRequest,
     };
 
     // Helper function to authenticate user and get token
@@ -114,6 +115,11 @@ mod tests {
 
         let get_users_params = GetUsersRequest {
             include_deleted: Some(false),
+            search_field: None,
+            search: None,
+            friends_priority: false,
+            limit: None,
+            offset: None,
         };
 
         let req = test::TestRequest::get()
@@ -384,6 +390,139 @@ mod tests {
         let resp = test::call_service(&app, req).await;
         // This might fail due to token validation in test environment, but we're testing the endpoint
         assert!(resp.status().is_client_error());
+
+        test_db.drop().await;
+    }
+
+    #[actix_web::test]
+    async fn test_users_add_friend_success() {
+        let test_db = TestDatabase::new().await;
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_db.get_db()))
+                .configure(|config| api::configure_routes(config, test_db.get_db_raw())),
+        )
+        .await;
+
+        // Authenticate to get token
+        let token = authenticate_user(&app).await;
+
+        // Create a second user to be our friend
+        let create_user_request = CreateUserRequest {
+            username: "friend_user".to_string(),
+            password: "ValidPass123!".to_string(),
+            first_name: "Friend".to_string(),
+            last_name: "User".to_string(),
+            email: "friend.user@example.com".to_string(),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/register")
+            .set_json(&create_user_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::CREATED);
+
+        // Add friend
+        let add_friend_request = AddFriendRequest {
+            friend_id: 2, // The ID of the user we just created
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/users/friends/add")
+            .insert_header(("Authorization", format!("Bearer {}", token)))
+            .set_json(&add_friend_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+
+        test_db.drop().await;
+    }
+
+    #[actix_web::test]
+    async fn test_users_remove_friend_success() {
+        let test_db = TestDatabase::new().await;
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_db.get_db()))
+                .configure(|config| api::configure_routes(config, test_db.get_db_raw())),
+        )
+        .await;
+
+        // Authenticate to get token
+        let token = authenticate_user(&app).await;
+
+        // Create a second user to be our friend
+        let create_user_request = CreateUserRequest {
+            username: "friend_user".to_string(),
+            password: "ValidPass123!".to_string(),
+            first_name: "Friend".to_string(),
+            last_name: "User".to_string(),
+            email: "friend.user@example.com".to_string(),
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/register")
+            .set_json(&create_user_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::CREATED);
+
+        // Add friend first
+        let add_friend_request = AddFriendRequest {
+            friend_id: 2, // The ID of the user we just created
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/users/friends/add")
+            .insert_header(("Authorization", format!("Bearer {}", token)))
+            .set_json(&add_friend_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+
+        // Remove friend
+        let remove_friend_request = RemoveFriendRequest {
+            friend_id: 2, // The ID of the user we just created
+        };
+
+        let req = test::TestRequest::post()
+            .uri("/api/users/friends/remove")
+            .insert_header(("Authorization", format!("Bearer {}", token)))
+            .set_json(&remove_friend_request)
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
+
+        test_db.drop().await;
+    }
+
+    #[actix_web::test]
+    async fn test_users_get_friends_success() {
+        let test_db = TestDatabase::new().await;
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(test_db.get_db()))
+                .configure(|config| api::configure_routes(config, test_db.get_db_raw())),
+        )
+        .await;
+
+        // Authenticate to get token
+        let token = authenticate_user(&app).await;
+
+        // Get friends
+        let req = test::TestRequest::get()
+            .uri("/api/users/friends")
+            .insert_header(("Authorization", format!("Bearer {}", token)))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert!(resp.status().is_success());
 
         test_db.drop().await;
     }

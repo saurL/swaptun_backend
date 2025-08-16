@@ -1,5 +1,6 @@
 pub mod deezer_token_repository;
 pub mod fcm_token_repository;
+pub mod friendship_repository;
 pub mod music_playlist_repository;
 pub mod music_repository;
 pub mod playlist_repository;
@@ -12,6 +13,7 @@ pub mod youtube_token_repository;
 
 pub use deezer_token_repository::*;
 pub use fcm_token_repository::*;
+pub use friendship_repository::*;
 pub use music_playlist_repository::*;
 pub use music_repository::*;
 pub use playlist_repository::*;

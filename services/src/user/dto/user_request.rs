@@ -30,6 +30,7 @@ pub struct GetUsersRequest {
     pub search_field: Option<SearchField>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,
+    pub friends_priority: bool,
 }
 
 #[derive(Deserialize, Serialize, Validate)]

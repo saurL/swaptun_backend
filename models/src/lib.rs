@@ -1,5 +1,6 @@
 pub mod deezer_token;
 pub mod fcm_token;
+pub mod friendship;
 pub mod music;
 pub mod music_playlist;
 pub mod playlist;
@@ -49,4 +50,9 @@ pub use user_info::{
 pub use youtube_token::{
     ActiveModel as YoutubeTokenActiveModel, Column as YoutubeTokenColumn,
     Entity as YoutubeTokenEntity, Model as YoutubeTokenModel,
+};
+
+pub use friendship::{
+    ActiveModel as FriendshipActiveModel, Column as FriendshipColumn, Entity as FriendshipEntity,
+    Model as FriendshipModel,
 };

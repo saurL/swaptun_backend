@@ -1,12 +1,12 @@
-use log::info;
-use sea_orm::metric::Info;
 use sea_orm::{prelude::*, DeleteResult, Order, QueryOrder};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
     QuerySelect, Set,
 };
 use std::sync::Arc;
-use swaptun_models::{UserActiveModel, UserColumn, UserEntity, UserModel};
+use swaptun_models::{
+    FriendshipColumn, FriendshipEntity, UserActiveModel, UserColumn, UserEntity, UserModel,
+};
 
 pub struct UserRepository {
     db: Arc<DatabaseConnection>,
@@ -88,47 +88,131 @@ impl UserRepository {
         model.save(self.db.as_ref()).await
     }
 
-    pub async fn search_users(
+    pub async fn search_in_friends(
         &self,
+        user_id: i32,
         search_term: Option<String>,
         search_fields: Option<UserColumn>,
         include_deleted: bool,
         limit: Option<u64>,
         offset: Option<u64>,
     ) -> Result<Vec<UserModel>, DbErr> {
-        let mut query = UserEntity::find();
+        let friend_ids = self.get_friend_ids(user_id).await?;
 
-        // Apply deleted filter if needed
+        let query = self
+            .build_search_user_query(
+                UserEntity::find().filter(UserColumn::Id.is_in(friend_ids)),
+                &search_term,
+                &search_fields,
+                &include_deleted,
+            )
+            .limit(limit.unwrap_or(u64::MAX))
+            .offset(offset.unwrap_or(0));
+
+        query.all(self.db.as_ref()).await
+    }
+
+    pub async fn search_users(
+        &self,
+        user_id: i32,
+        search_term: Option<String>,
+        search_fields: Option<UserColumn>,
+        include_deleted: bool,
+        limit: Option<u64>,
+        offset: Option<u64>,
+        friend_priority: bool,
+    ) -> Result<Vec<UserModel>, DbErr> {
+        let query = self
+            .build_search_user_query(
+                UserEntity::find(),
+                &search_term,
+                &search_fields,
+                &include_deleted,
+            )
+            .limit(limit.unwrap_or(u64::MAX))
+            .offset(offset.unwrap_or(0));
+
+        let mut users = query.all(self.db.as_ref()).await?;
+        if friend_priority {
+            // Prioritize friends in the results
+            let mut friends = self
+                .search_in_friends(
+                    user_id,
+                    search_term,
+                    search_fields,
+                    include_deleted,
+                    limit,
+                    offset,
+                )
+                .await?;
+            friends.extend(users);
+            let mut seen_ids = std::collections::HashSet::new();
+
+            friends.retain(|x| seen_ids.insert(x.id));
+            users = friends;
+        }
+
+        Ok(users)
+    }
+
+    fn calculate_threshold(&self, search_term: &str) -> f64 {
+        // Implement your threshold calculation logic here
+        // For example, you might want to use a fixed threshold or a dynamic one based on the search term
+        let len = search_term.len();
+        match len {
+            0..=3 => 0.1,                              // Low threshold for very short terms
+            4..=6 => 0.2,                              // Medium threshold for short to medium terms
+            _ => (0.3 + (len as f64 * 0.05)).min(1.0), // Higher threshold for longer terms
+        }
+    }
+
+    pub async fn find_friends(&self, user_id: i32) -> Result<Vec<UserModel>, DbErr> {
+        let friend_ids = self.get_friend_ids(user_id).await?;
+        UserEntity::find()
+            .filter(UserColumn::Id.is_in(friend_ids))
+            .all(&*self.db)
+            .await
+    }
+
+    async fn get_friend_ids(&self, user_id: i32) -> Result<Vec<i32>, DbErr> {
+        let friendships = FriendshipEntity::find()
+            .filter(FriendshipColumn::UserId.eq(user_id))
+            .all(&*self.db)
+            .await?;
+
+        Ok(friendships.into_iter().map(|f| f.friend_id).collect())
+    }
+
+    fn build_search_user_query(
+        &self,
+        base_query: Select<UserEntity>,
+        search_term: &Option<String>,
+        search_field: &Option<UserColumn>,
+        include_deleted: &bool,
+    ) -> Select<UserEntity> {
+        let mut query = base_query;
+
         if !include_deleted {
             query = query.filter(UserColumn::DeletedOn.is_null());
         }
 
-        // Build the search condition
-        if let (Some(field), Some(search_term)) = (search_fields, search_term) {
-            let field = match field {
+        if let (Some(field), Some(search_term)) = (search_field, search_term) {
+            let field_str = match field {
                 UserColumn::Username => "username",
                 UserColumn::FirstName => "first_name",
                 UserColumn::LastName => "last_name",
                 UserColumn::Email => "email",
-                _ => {
-                    return Err(DbErr::Custom("Invalid search field".to_string()));
-                }
+                _ => return query, // ignore invalid field
             };
-            let condition =
-                Expr::cust_with_values::<&str, _, _>(&format!("{} % ?", field), vec![search_term]);
-            let order_by = Expr::cust(format!("similarity(username, {})", field));
+            let threshold = self.calculate_threshold(&search_term);
+            let condition = Expr::cust(format!(
+                "similarity({}, '{}') > {}",
+                field_str, search_term, threshold
+            ));
+            let order_by = Expr::cust(format!("similarity({}, '{}')", field_str, search_term));
             query = query.filter(condition).order_by(order_by, Order::Desc);
-            info!("Using custom querry query: {:?}", query);
         }
 
-        // Apply limit and offset
-        if let Some(limit) = limit {
-            query = query.limit(limit);
-        }
-        if let Some(offset) = offset {
-            query = query.offset(offset);
-        }
-
-        query.all(self.db.as_ref()).await
+        query
     }
 }

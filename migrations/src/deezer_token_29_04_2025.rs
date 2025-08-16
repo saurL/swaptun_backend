@@ -1,3 +1,4 @@
+use crate::m20250319_093000_create_tbl_users::TblUsers;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -57,10 +58,4 @@ enum TblDeezerTokens {
     Token,
     CreatedOn,
     UpdatedOn,
-}
-
-#[derive(Iden)]
-enum TblUsers {
-    Table,
-    Id,
 }

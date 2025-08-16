@@ -1,7 +1,7 @@
 use sea_orm::{entity::prelude::*, sqlx::types::chrono::NaiveDateTime};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize, Eq, Hash)]
 #[sea_orm(table_name = "tbl_users")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -70,6 +70,16 @@ impl Related<super::fcm_token::Entity> for Entity {
 impl Related<super::youtube_token::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::YoutubeToken.def()
+    }
+}
+
+impl Related<Entity> for Entity {
+    fn to() -> RelationDef {
+        super::friendship::Relation::Friend.def()
+    }
+
+    fn via() -> Option<RelationDef> {
+        Some(super::friendship::Relation::User.def().rev())
     }
 }
 

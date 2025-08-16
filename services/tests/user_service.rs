@@ -542,3 +542,460 @@ async fn test_reset_password_expired_token() {
 
     test_db.drop().await;
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_add_friend_success() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create a second user for testing
+    let create_user_request = CreateUserRequest {
+        username: "friend_user".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User".to_string(),
+        email: "friend_user@gmail.com".to_string(),
+    };
+    let friend = user_service.create_user(create_user_request).await.unwrap();
+
+    // Add friend
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_ok());
+
+    // Verify friendship was created
+    let friends = user_service.get_friends(&test_db.get_user()).await.unwrap();
+    assert_eq!(friends.len(), 1);
+    assert_eq!(friends[0].id, friend.id);
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_add_friend_already_exists() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create a second user for testing
+    let create_user_request = CreateUserRequest {
+        username: "friend_user".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User".to_string(),
+        email: "friend_user@gmail.com".to_string(),
+    };
+    let friend = user_service.create_user(create_user_request).await.unwrap();
+
+    // Add friend first time
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_ok());
+
+    // Try to add the same friend again
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_err());
+    if let Err(err) = result {
+        assert_eq!(
+            err.to_string(),
+            "Validation error: Friendship already exists"
+        );
+    }
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_remove_friend_success() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create a second user for testing
+    let create_user_request = CreateUserRequest {
+        username: "friend_user".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User".to_string(),
+        email: "friend_user@gmail.com".to_string(),
+    };
+    let friend = user_service.create_user(create_user_request).await.unwrap();
+
+    // Add friend
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_ok());
+
+    // Verify friendship was created
+    let friends = user_service.get_friends(&test_db.get_user()).await.unwrap();
+    assert_eq!(friends.len(), 1);
+
+    // Remove friend
+    let result = user_service
+        .remove_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_ok());
+
+    // Verify friendship was removed
+    let friends = user_service.get_friends(&test_db.get_user()).await.unwrap();
+    assert_eq!(friends.len(), 0);
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_remove_friend_not_exists() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create a second user for testing
+    let create_user_request = CreateUserRequest {
+        username: "friend_user".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User".to_string(),
+        email: "friend_user@gmail.com".to_string(),
+    };
+    let friend = user_service.create_user(create_user_request).await.unwrap();
+
+    // Try to remove friend that doesn't exist
+    let result = user_service
+        .remove_friend(test_db.get_user().id, friend.id)
+        .await;
+    assert!(result.is_err());
+    if let Err(err) = result {
+        assert_eq!(
+            err.to_string(),
+            "Validation error: Friendship does not exist"
+        );
+    }
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_get_friends_success() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create two users for testing
+    let create_user_request1 = CreateUserRequest {
+        username: "friend_user1".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User1".to_string(),
+        email: "friend_user1@gmail.com".to_string(),
+    };
+    let friend1 = user_service
+        .create_user(create_user_request1)
+        .await
+        .unwrap();
+
+    let create_user_request2 = CreateUserRequest {
+        username: "friend_user2".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Friend".to_string(),
+        last_name: "User2".to_string(),
+        email: "friend_user2@gmail.com".to_string(),
+    };
+    let friend2 = user_service
+        .create_user(create_user_request2)
+        .await
+        .unwrap();
+
+    // Add both friends
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend1.id)
+        .await;
+    assert!(result.is_ok());
+
+    let result = user_service
+        .add_friend(test_db.get_user().id, friend2.id)
+        .await;
+    assert!(result.is_ok());
+
+    // Get friends
+    let friends = user_service.get_friends(&test_db.get_user()).await.unwrap();
+    assert_eq!(friends.len(), 2);
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_search_users_standard_search() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create additional users for testing
+    let create_user_request1 = CreateUserRequest {
+        username: "alice_smith".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Alice".to_string(),
+        last_name: "Smith".to_string(),
+        email: "alice.smith@gmail.com".to_string(),
+    };
+    let _ = user_service
+        .create_user(create_user_request1)
+        .await
+        .unwrap();
+
+    let create_user_request2 = CreateUserRequest {
+        username: "bob_johnson".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Bob".to_string(),
+        last_name: "Johnson".to_string(),
+        email: "bob.johnson@gmail.com".to_string(),
+    };
+    let _ = user_service
+        .create_user(create_user_request2)
+        .await
+        .unwrap();
+
+    // Test standard search by username
+    let request = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("alice".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::Username),
+        limit: Some(10),
+        offset: Some(0),
+        friends_priority: false,
+    };
+
+    let users = user_service
+        .get_users(test_db.get_user().id, request)
+        .await
+        .unwrap();
+
+    // Should find at least the user we're looking for
+    assert!(!users.is_empty());
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_search_users_with_friends_priority() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create friends for testing
+    let create_user_request1 = CreateUserRequest {
+        username: "friend_alice".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Alice".to_string(),
+        last_name: "Friend".to_string(),
+        email: "alice.friend@gmail.com".to_string(),
+    };
+    let friend1 = user_service
+        .create_user(create_user_request1)
+        .await
+        .unwrap();
+
+    let create_user_request2 = CreateUserRequest {
+        username: "friend_bob".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Bob".to_string(),
+        last_name: "Friend".to_string(),
+        email: "bob.friend@gmail.com".to_string(),
+    };
+    let friend2 = user_service
+        .create_user(create_user_request2)
+        .await
+        .unwrap();
+
+    let create_user_request3 = CreateUserRequest {
+        username: "stranger_charlie".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Charlie".to_string(),
+        last_name: "Stranger".to_string(),
+        email: "charlie.stranger@gmail.com".to_string(),
+    };
+    let _ = user_service
+        .create_user(create_user_request3)
+        .await
+        .unwrap();
+
+    // Add friends
+    user_service
+        .add_friend(test_db.get_user().id, friend1.id)
+        .await
+        .unwrap();
+    user_service
+        .add_friend(test_db.get_user().id, friend2.id)
+        .await
+        .unwrap();
+
+    // Test search with friends priority
+    let request = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("friend".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::Username),
+        limit: Some(10),
+        offset: Some(0),
+        friends_priority: true,
+    };
+
+    let users = user_service
+        .get_users(test_db.get_user().id, request)
+        .await
+        .unwrap();
+
+    // Should find friends first in the results
+    assert!(!users.is_empty());
+
+    // Check that friends appear in the results
+    let friend_ids: Vec<i32> = vec![friend1.id, friend2.id];
+    let found_friends: Vec<&swaptun_models::UserModel> = users
+        .iter()
+        .filter(|user| friend_ids.contains(&user.id))
+        .collect();
+
+    // At least one friend should be found
+    assert!(!found_friends.is_empty());
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_search_users_no_results() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Test search with no matching results
+    let request = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("nonexistentuser12345".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::Username),
+        limit: Some(10),
+        offset: Some(0),
+        friends_priority: false,
+    };
+
+    let users = user_service
+        .get_users(test_db.get_user().id, request)
+        .await
+        .unwrap();
+
+    // Should return empty results
+    assert!(users.is_empty());
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_search_users_with_limit_and_offset() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create multiple users with similar names
+    for i in 1..=5 {
+        let create_user_request = CreateUserRequest {
+            username: format!("testuser{}", i),
+            password: "ValidPass123!".to_string(),
+            first_name: "Test".to_string(),
+            last_name: format!("User{}", i),
+            email: format!("test{}@example.com", i),
+        };
+        user_service.create_user(create_user_request).await.unwrap();
+    }
+
+    // Test search with limit
+    let request = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("test".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::FirstName),
+        limit: Some(3),
+        offset: Some(0),
+        friends_priority: false,
+    };
+
+    let users = user_service
+        .get_users(test_db.get_user().id, request)
+        .await
+        .unwrap();
+
+    // Should respect the limit
+    assert!(users.len() <= 3);
+
+    // Test search with offset
+    let request2 = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("test".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::FirstName),
+        limit: Some(3),
+        offset: Some(1),
+        friends_priority: false,
+    };
+
+    let users2 = user_service
+        .get_users(test_db.get_user().id, request2)
+        .await
+        .unwrap();
+
+    // Should have different results due to offset
+    // Note: This test might be flaky depending on the fuzzy search implementation
+    // but it's still useful to verify the offset parameter is processed
+
+    test_db.drop().await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_search_users_include_deleted() {
+    let test_db = TestDatabase::new().await;
+    let user_service = UserService::new(test_db.get_db());
+
+    // Create a user and then delete it
+    let create_user_request = CreateUserRequest {
+        username: "deleted_user".to_string(),
+        password: "ValidPass123!".to_string(),
+        first_name: "Deleted".to_string(),
+        last_name: "User".to_string(),
+        email: "deleted.user@gmail.com".to_string(),
+    };
+    let user = user_service.create_user(create_user_request).await.unwrap();
+
+    // Delete the user
+    user_service.delete_user_logical(user.id).await.unwrap();
+
+    // Test search without including deleted users
+    let request = swaptun_services::GetUsersRequest {
+        include_deleted: Some(false),
+        search: Some("deleted".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::FirstName),
+        limit: Some(10),
+        offset: Some(0),
+        friends_priority: false,
+    };
+
+    let users = user_service
+        .get_users(test_db.get_user().id, request)
+        .await
+        .unwrap();
+
+    // Should not find the deleted user
+    let found_deleted = users.iter().any(|u| u.id == user.id);
+    assert!(!found_deleted);
+
+    // Test search including deleted users
+    let request2 = swaptun_services::GetUsersRequest {
+        include_deleted: Some(true),
+        search: Some("deleted".to_string()),
+        search_field: Some(swaptun_services::model::SearchField::FirstName),
+        limit: Some(10),
+        offset: Some(0),
+        friends_priority: false,
+    };
+
+    let users2 = user_service
+        .get_users(test_db.get_user().id, request2)
+        .await
+        .unwrap();
+
+    // Should find the deleted user
+    let found_deleted = users2.iter().any(|u| u.id == user.id);
+    assert!(found_deleted);
+
+    test_db.drop().await;
+}

@@ -11,7 +11,7 @@ use log::{info, warn};
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult};
 use std::sync::Arc;
 use swaptun_models::{UserActiveModel, UserModel};
-use swaptun_repositories::{FcmTokenRepository, UserRepository};
+use swaptun_repositories::{FcmTokenRepository, FriendshipRepository, UserRepository};
 
 use crate::{
     CreateUserRequest, ForgotPasswordRequest, GetUsersRequest, LoginEmailRequest, LoginRequest,
@@ -21,13 +21,15 @@ use crate::{
 pub struct UserService {
     user_repository: UserRepository,
     fcm_token_repository: FcmTokenRepository,
+    friendship_repository: FriendshipRepository,
 }
 
 impl UserService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         UserService {
             user_repository: UserRepository::new(db.clone()),
-            fcm_token_repository: FcmTokenRepository::new(db),
+            fcm_token_repository: FcmTokenRepository::new(db.clone()),
+            friendship_repository: FriendshipRepository::new(db),
         }
     }
 
@@ -110,17 +112,23 @@ impl UserService {
         Ok(user)
     }
 
-    pub async fn get_users(&self, request: GetUsersRequest) -> Result<Vec<UserModel>, DbErr> {
+    pub async fn get_users(
+        &self,
+        user_id: i32,
+        request: GetUsersRequest,
+    ) -> Result<Vec<UserModel>, DbErr> {
         let include_deleted = request.include_deleted.unwrap_or(false);
         info!("get User Request: {:?}", request);
         let users = self
             .user_repository
             .search_users(
+                user_id,
                 request.search,
                 request.search_field.map(|f| f.into()),
                 include_deleted,
                 request.limit,
                 request.offset,
+                request.friends_priority,
             )
             .await?;
 
@@ -483,5 +491,100 @@ impl UserService {
             .await
             .map_err(AppError::from)?;
         Ok(())
+    }
+
+    pub async fn add_friend(&self, user_id: i32, friend_id: i32) -> Result<(), AppError> {
+        // Check if both users exist
+        let user = self.find_by_id(user_id).await?;
+        let friend = self.find_by_id(friend_id).await?;
+
+        if user.is_none() {
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                user_id
+            )));
+        }
+
+        if friend.is_none() {
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                friend_id
+            )));
+        }
+
+        // Check if friendship already exists (in either direction)
+        if let Some(_) = self
+            .friendship_repository
+            .find_friendship_bidirectional(user_id, friend_id)
+            .await?
+        {
+            return Err(AppError::Validation(
+                "Friendship already exists".to_string(),
+            ));
+        }
+
+        // Create mutual friendship
+        self.friendship_repository
+            .create_mutual_friendship(user_id, friend_id)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn remove_friend(&self, user_id: i32, friend_id: i32) -> Result<(), AppError> {
+        // Check if both users exist
+        let user = self.find_by_id(user_id).await?;
+        let friend = self.find_by_id(friend_id).await?;
+
+        if user.is_none() {
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                user_id
+            )));
+        }
+
+        if friend.is_none() {
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                friend_id
+            )));
+        }
+
+        // Check if friendship exists
+        if self
+            .friendship_repository
+            .find_friendship_bidirectional(user_id, friend_id)
+            .await?
+            .is_none()
+        {
+            return Err(AppError::Validation(
+                "Friendship does not exist".to_string(),
+            ));
+        }
+
+        // Delete friendship
+        self.friendship_repository
+            .delete_friendship(user_id, friend_id)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn get_friends(&self, model: &UserModel) -> Result<Vec<UserModel>, AppError> {
+        // Check if user exists
+        let user_id = model.id;
+        let user = self.find_by_id(user_id).await?;
+
+        if user.is_none() {
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                user_id
+            )));
+        }
+
+        // Get friends
+        let friends = self.user_repository.find_friends(user_id).await?;
+
+        Ok(friends)
     }
 }
