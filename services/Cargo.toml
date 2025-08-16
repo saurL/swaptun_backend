@@ -16,7 +16,6 @@ full = [
   "lazy_static",
   "swaptun-migrations",
   "swaptun-repositories",
-  "chrono",
   "actix-web",
   "ytmapi-rs",
   "oauth2",
@@ -38,7 +37,7 @@ sea-orm = { version = "1.1.10",  features = [
   "macros",
 ] }
 actix-web = { version = "4.10.2",optional = true}
-chrono = { version = "0.4.40", features = ["serde"], optional = true }
+chrono = { version = "0.4.40", features = ["serde"] }
 tokio = { version = "1.44.1", features = ["full"], optional = true }
 argon2 = { version = "0.5.3", optional = true }
 futures = { version = "0.3.31", optional = true }
