@@ -101,11 +101,14 @@ impl UserRepository {
 
         let query = self
             .build_search_user_query(
+                user_id,
                 UserEntity::find().filter(UserColumn::Id.is_in(friend_ids)),
                 &search_term,
                 &search_fields,
                 &include_deleted,
+                &false,
             )
+            .await
             .limit(limit.unwrap_or(u64::MAX))
             .offset(offset.unwrap_or(0));
 
@@ -121,14 +124,18 @@ impl UserRepository {
         limit: Option<u64>,
         offset: Option<u64>,
         friend_priority: bool,
+        exclude_friends: bool,
     ) -> Result<Vec<UserModel>, DbErr> {
         let query = self
             .build_search_user_query(
+                user_id,
                 UserEntity::find(),
                 &search_term,
                 &search_fields,
                 &include_deleted,
+                &exclude_friends,
             )
+            .await
             .limit(limit.unwrap_or(u64::MAX))
             .offset(offset.unwrap_or(0));
 
@@ -159,11 +166,7 @@ impl UserRepository {
         // Implement your threshold calculation logic here
         // For example, you might want to use a fixed threshold or a dynamic one based on the search term
         let len = search_term.len();
-        match len {
-            0..=3 => 0.1,                              // Low threshold for very short terms
-            4..=6 => 0.2,                              // Medium threshold for short to medium terms
-            _ => (0.3 + (len as f64 * 0.05)).min(1.0), // Higher threshold for longer terms
-        }
+        (0.1 + (len - 1) as f64 * 0.035).min(0.55)
     }
 
     pub async fn find_friends(&self, user_id: i32) -> Result<Vec<UserModel>, DbErr> {
@@ -183,12 +186,14 @@ impl UserRepository {
         Ok(friendships.into_iter().map(|f| f.friend_id).collect())
     }
 
-    fn build_search_user_query(
+    async fn build_search_user_query(
         &self,
+        user_id: i32,
         base_query: Select<UserEntity>,
         search_term: &Option<String>,
         search_field: &Option<UserColumn>,
         include_deleted: &bool,
+        exclude_friends: &bool,
     ) -> Select<UserEntity> {
         let mut query = base_query;
 
@@ -211,6 +216,9 @@ impl UserRepository {
             ));
             let order_by = Expr::cust(format!("similarity({}, '{}')", field_str, search_term));
             query = query.filter(condition).order_by(order_by, Order::Desc);
+        }
+        if *exclude_friends {
+            query = query.filter(UserColumn::Id.is_not_in(self.get_friend_ids(user_id).await));
         }
 
         query

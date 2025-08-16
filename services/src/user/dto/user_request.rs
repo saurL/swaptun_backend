@@ -31,6 +31,7 @@ pub struct GetUsersRequest {
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub friends_priority: bool,
+    pub exclude_friends: bool,
 }
 
 #[derive(Deserialize, Serialize, Validate)]

@@ -129,6 +129,7 @@ impl UserService {
                 request.limit,
                 request.offset,
                 request.friends_priority,
+                request.exclude_friends,
             )
             .await?;
 
