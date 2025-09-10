@@ -762,6 +762,7 @@ async fn test_search_users_standard_search() {
         limit: Some(10),
         offset: Some(0),
         friends_priority: false,
+        exclude_friends: false,
     };
 
     let users = user_service
@@ -835,6 +836,7 @@ async fn test_search_users_with_friends_priority() {
         limit: Some(10),
         offset: Some(0),
         friends_priority: true,
+        exclude_friends: false,
     };
 
     let users = user_service
@@ -871,6 +873,7 @@ async fn test_search_users_no_results() {
         limit: Some(10),
         offset: Some(0),
         friends_priority: false,
+        exclude_friends: false,
     };
 
     let users = user_service
@@ -909,6 +912,7 @@ async fn test_search_users_with_limit_and_offset() {
         limit: Some(3),
         offset: Some(0),
         friends_priority: false,
+        exclude_friends: false,
     };
 
     let users = user_service
@@ -927,9 +931,10 @@ async fn test_search_users_with_limit_and_offset() {
         limit: Some(3),
         offset: Some(1),
         friends_priority: false,
+        exclude_friends: false,
     };
 
-    let users2 = user_service
+    let _users2 = user_service
         .get_users(test_db.get_user().id, request2)
         .await
         .unwrap();
@@ -967,6 +972,7 @@ async fn test_search_users_include_deleted() {
         limit: Some(10),
         offset: Some(0),
         friends_priority: false,
+        exclude_friends: false,
     };
 
     let users = user_service
@@ -986,6 +992,7 @@ async fn test_search_users_include_deleted() {
         limit: Some(10),
         offset: Some(0),
         friends_priority: false,
+        exclude_friends: false,
     };
 
     let users2 = user_service

@@ -281,6 +281,7 @@ impl YoutubeMusicService {
         };
         let client_id = self.get_client_id()?;
         let client_secret = self.get_client_secret()?;
+        info!("token model : {:?}", token_model);
         let token = OAuthToken::new(
             "Bearer".to_string(),
             token_model.access_token.clone(),

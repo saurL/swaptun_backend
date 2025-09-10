@@ -61,6 +61,22 @@ impl PlaylistService {
         }
     }
 
+    pub async fn get_shared_playlists(
+        &self,
+        user: UserModel,
+    ) -> Result<GetPlaylistResponse, DbErr> {
+        match self.playlist_repository.find_shared_playlist(&user).await {
+            Ok(playlists) => {
+                let response = GetPlaylistResponse { vec: playlists };
+                Ok(response)
+            }
+            Err(e) => {
+                error!("Error fetching shared playlists: {:?}", e);
+                Err(e)
+            }
+        }
+    }
+
     pub async fn create(
         &self,
         request: CreatePlaylistRequest,
@@ -228,6 +244,35 @@ impl PlaylistService {
                 "Music {} not found in playlist with id {}",
                 music.title, playlist.id
             )))
+        }
+    }
+
+    pub async fn share_playlist(
+        &self,
+        user: &UserModel,
+        playlist: &PlaylistModel,
+    ) -> Result<(), AppError> {
+        self.playlist_repository
+            .create_shared_link(user, playlist)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn unshare_playlist(
+        &self,
+        user: &UserModel,
+        playlist: &PlaylistModel,
+    ) -> Result<(), AppError> {
+        match self
+            .playlist_repository
+            .delete_shared_link(user, playlist)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("Error unsharing playlist: {:?}", e);
+                Err(AppError::InternalServerError)
+            }
         }
     }
 }

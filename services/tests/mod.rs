@@ -1,3 +1,4 @@
+mod apple;
 mod deezer;
 mod forgot_password_test;
 mod mail_service;
@@ -7,3 +8,5 @@ mod playlist_test;
 mod spotify;
 mod user_service;
 mod yt_music;
+
+mod common;

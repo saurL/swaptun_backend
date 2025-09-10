@@ -36,3 +36,8 @@ pub struct GetPlaylistResponse {
 pub struct SendPlaylistRequest {
     pub destination: PlaylistOrigin,
 }
+#[derive(Deserialize, Serialize, Validate, Debug)]
+
+pub struct SharePlaylistRequest {
+    pub user_id: i32,
+}

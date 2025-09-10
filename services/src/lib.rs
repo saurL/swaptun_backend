@@ -3,6 +3,7 @@
 pub mod auth;
 pub mod deezer;
 
+pub mod apple;
 pub mod error;
 pub mod mail;
 pub mod music;
@@ -30,9 +31,10 @@ pub use spotify::*;
 
 pub use user::*;
 
-pub use notification::*;
-
 pub use yt_music::*;
+
+pub use apple::*;
+pub use notification::*;
 
 pub use swaptun_models::*;
 

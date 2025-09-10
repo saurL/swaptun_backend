@@ -14,6 +14,8 @@ mod spotify_token_29_04_2025;
 
 mod m20250814_000000_enable_fuzzy_search;
 mod m20250816_000000_create_friendships_table;
+mod m20250816_000001_create_shared_playlist_table;
+mod m20250910_000000_create_apple_token_table;
 mod youtube_token_28_06_2025;
 
 pub struct Migrator;
@@ -36,6 +38,8 @@ impl MigratorTrait for Migrator {
             Box::new(youtube_token_28_06_2025::Migration),
             Box::new(m20250814_000000_enable_fuzzy_search::Migration),
             Box::new(m20250816_000000_create_friendships_table::Migration),
+            Box::new(m20250816_000001_create_shared_playlist_table::Migration),
+            Box::new(m20250910_000000_create_apple_token_table::Migration),
         ]
     }
 }

@@ -35,6 +35,8 @@ pub enum Relation {
     Playlist,
     #[sea_orm(has_one = "super::youtube_token::Entity")]
     YoutubeToken,
+    #[sea_orm(has_one = "super::apple_token::Entity")]
+    AppleToken,
 }
 
 impl Related<super::spotify_code::Entity> for Entity {
@@ -73,6 +75,12 @@ impl Related<super::youtube_token::Entity> for Entity {
     }
 }
 
+impl Related<super::apple_token::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::AppleToken.def()
+    }
+}
+
 impl Related<Entity> for Entity {
     fn to() -> RelationDef {
         super::friendship::Relation::Friend.def()
@@ -95,5 +103,20 @@ impl Into<UserBean> for Model {
             id: self.id,
             username: self.username,
         }
+    }
+}
+
+pub struct SharedPlaylist;
+
+impl Linked for SharedPlaylist {
+    type FromEntity = Entity;
+
+    type ToEntity = super::playlist::Entity;
+
+    fn link(&self) -> Vec<RelationDef> {
+        vec![
+            super::shared_playlist::Relation::User.def().rev(),
+            super::shared_playlist::Relation::Playlist.def(),
+        ]
     }
 }

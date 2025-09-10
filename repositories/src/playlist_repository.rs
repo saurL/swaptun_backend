@@ -1,12 +1,14 @@
+use log::info;
 use std::sync::Arc;
 use swaptun_models::{
-    playlist::PlaylistOrigin, MusicEntity, MusicModel, PlaylistActiveModel, PlaylistColumn,
-    PlaylistEntity, PlaylistModel, UserModel,
+    playlist::PlaylistOrigin, user::SharedPlaylist, MusicEntity, MusicModel, PlaylistActiveModel,
+    PlaylistColumn, PlaylistEntity, PlaylistModel, SharedPlaylistActiveModel, SharedPlaylistColumn,
+    SharedPlaylistEntity, UserModel,
 };
 
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait,
-    ModelTrait, QueryFilter,
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, DeleteResult,
+    EntityTrait, ModelTrait, QueryFilter,
 };
 pub struct PlaylistRepository {
     db: Arc<DatabaseConnection>,
@@ -54,5 +56,61 @@ impl PlaylistRepository {
             .find_related(MusicEntity)
             .all(self.db.as_ref())
             .await
+    }
+
+    pub async fn create_shared_link(
+        &self,
+        user: &UserModel,
+        playlist: &PlaylistModel,
+    ) -> Result<(), DbErr> {
+        if self.is_playlist_shared(user, playlist).await? {
+            info!(
+                "Playlist {} is already shared with user {}",
+                playlist.id, user.id
+            );
+            return Ok(());
+        }
+        // Implementation for creating a shared link for the playlist
+        SharedPlaylistActiveModel {
+            user_id: Set(user.id),
+            playlist_id: Set(playlist.id),
+            ..Default::default()
+        }
+        .insert(&*self.db)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn delete_shared_link(
+        &self,
+        user: &UserModel,
+        playlist: &PlaylistModel,
+    ) -> Result<DeleteResult, DbErr> {
+        SharedPlaylistEntity::delete_many()
+            .filter(
+                SharedPlaylistColumn::UserId
+                    .eq(user.id)
+                    .and(SharedPlaylistColumn::PlaylistId.eq(playlist.id)),
+            )
+            .exec(&*self.db)
+            .await
+    }
+
+    pub async fn find_shared_playlist(
+        &self,
+        user: &UserModel,
+    ) -> Result<Vec<PlaylistModel>, DbErr> {
+        user.find_linked(SharedPlaylist).all(&*self.db).await
+    }
+
+    async fn is_playlist_shared(
+        &self,
+        user: &UserModel,
+        playlist: &PlaylistModel,
+    ) -> Result<bool, DbErr> {
+        let shared_playlists = self.find_shared_playlist(user).await?;
+        Ok(shared_playlists
+            .iter()
+            .any(|shared| shared.id == playlist.id))
     }
 }

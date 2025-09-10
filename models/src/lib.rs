@@ -1,9 +1,11 @@
+pub mod apple_token;
 pub mod deezer_token;
 pub mod fcm_token;
 pub mod friendship;
 pub mod music;
 pub mod music_playlist;
 pub mod playlist;
+pub mod shared_playlist;
 pub mod spotify_code;
 pub mod spotify_token;
 pub mod user;
@@ -50,6 +52,16 @@ pub use user_info::{
 pub use youtube_token::{
     ActiveModel as YoutubeTokenActiveModel, Column as YoutubeTokenColumn,
     Entity as YoutubeTokenEntity, Model as YoutubeTokenModel,
+};
+
+pub use apple_token::{
+    ActiveModel as AppleTokenActiveModel, Column as AppleTokenColumn, Entity as AppleTokenEntity,
+    Model as AppleTokenModel,
+};
+
+pub use shared_playlist::{
+    ActiveModel as SharedPlaylistActiveModel, Column as SharedPlaylistColumn,
+    Entity as SharedPlaylistEntity, Model as SharedPlaylistModel,
 };
 
 pub use friendship::{

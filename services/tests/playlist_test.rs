@@ -1,7 +1,8 @@
 use swaptun_services::TestDatabase;
 
 use swaptun_models::PlaylistOrigin;
-use swaptun_services::{CreatePlaylistRequest, GetPlaylistsParams, PlaylistService};
+use swaptun_services::CreateUserRequest;
+use swaptun_services::{CreatePlaylistRequest, GetPlaylistsParams, PlaylistService, UserService};
 
 #[tokio::test]
 async fn test_get_playlists_by_origin() {
@@ -50,6 +51,147 @@ async fn test_get_playlists_by_origin() {
         .vec
         .iter()
         .all(|p| p.origin == PlaylistOrigin::Deezer));
+}
+
+#[tokio::test]
+async fn test_get_shared_playlists() {
+    // Setup test database and services
+    let test_db = TestDatabase::new().await;
+    let db = test_db.get_db();
+    let playlist_service = PlaylistService::new(db.clone().into());
+
+    // Create two users
+    let user1 = test_db.get_user();
+    let user_service = UserService::new(db.clone().into());
+    let create_user_request = CreateUserRequest {
+        username: "test_user2".to_string(),
+        password: "hashed_passwor12D!".to_string(),
+        first_name: "first_name2".to_string(),
+        last_name: "last_name2".to_string(),
+        email: "test_user2@gmail.com".to_string(),
+    };
+    let user2 = user_service.create_user(create_user_request).await.unwrap();
+
+    // Create a playlist for user1
+    let playlist_request = CreatePlaylistRequest {
+        name: "Shared Playlist".to_string(),
+        description: Some("A playlist to share".to_string()),
+        origin: PlaylistOrigin::Spotify,
+        origin_id: "shared123".into(),
+    };
+
+    let playlist = playlist_service
+        .create(playlist_request, user1.id)
+        .await
+        .unwrap();
+
+    // Share the playlist with user2
+    playlist_service
+        .share_playlist(&user2, &playlist)
+        .await
+        .unwrap();
+
+    // Verify user2 can get the shared playlist
+    let shared_playlists = playlist_service
+        .get_shared_playlists(user2.clone())
+        .await
+        .unwrap();
+
+    assert_eq!(shared_playlists.vec.len(), 1);
+    assert_eq!(shared_playlists.vec[0].id, playlist.id);
+    assert_eq!(shared_playlists.vec[0].name, "Shared Playlist");
+
+    // Verify user1's own playlists are separate
+    let user1_playlists = playlist_service
+        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None })
+        .await
+        .unwrap();
+
+    // User1 should have the playlist in their own playlists
+    assert_eq!(user1_playlists.vec.len(), 1);
+    assert_eq!(user1_playlists.vec[0].id, playlist.id);
+
+    // User1 should have 0 shared playlists
+    let user1_shared_playlists = playlist_service
+        .get_shared_playlists(user1.clone())
+        .await
+        .unwrap();
+
+    assert_eq!(user1_shared_playlists.vec.len(), 0);
+}
+
+#[tokio::test]
+async fn test_user_and_shared_playlists_separation() {
+    // Setup test database and services
+    let test_db = TestDatabase::new().await;
+    let db = test_db.get_db();
+    let playlist_service = PlaylistService::new(db.clone().into());
+
+    // Create two users
+    let user1 = test_db.get_user();
+    let user_service = UserService::new(db.clone().into());
+    let create_user_request = CreateUserRequest {
+        username: "test_user3".to_string(),
+        password: "hashed_passwor12D!".to_string(),
+        first_name: "first_name3".to_string(),
+        last_name: "last_name3".to_string(),
+        email: "test_user3@gmail.com".to_string(),
+    };
+    let user2 = user_service.create_user(create_user_request).await.unwrap();
+
+    // Create a playlist for user1 (user-owned)
+    let user_playlist_request = CreatePlaylistRequest {
+        name: "User Playlist".to_string(),
+        description: Some("User's own playlist".to_string()),
+        origin: PlaylistOrigin::Spotify,
+        origin_id: "user123".into(),
+    };
+
+    let _user_playlist = playlist_service
+        .create(user_playlist_request, user1.id)
+        .await
+        .unwrap();
+
+    // Create a playlist for user2 and share it with user1
+    let shared_playlist_request = CreatePlaylistRequest {
+        name: "Shared Playlist".to_string(),
+        description: Some("A shared playlist".to_string()),
+        origin: PlaylistOrigin::Deezer,
+        origin_id: "shared456".into(),
+    };
+
+    let shared_playlist = playlist_service
+        .create(shared_playlist_request, user2.id)
+        .await
+        .unwrap();
+
+    // Share the playlist with user1
+    playlist_service
+        .share_playlist(&user1, &shared_playlist)
+        .await
+        .unwrap();
+
+    // Verify user1 gets their own playlists and shared playlists separately
+    let user_playlists = playlist_service
+        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None })
+        .await
+        .unwrap();
+
+    let shared_playlists = playlist_service
+        .get_shared_playlists(user1.clone())
+        .await
+        .unwrap();
+
+    // User1 should have 1 user-owned playlist
+    assert_eq!(user_playlists.vec.len(), 1);
+    assert_eq!(user_playlists.vec[0].name, "User Playlist");
+
+    // User1 should have 1 shared playlist
+    assert_eq!(shared_playlists.vec.len(), 1);
+    assert_eq!(shared_playlists.vec[0].name, "Shared Playlist");
+
+    // Verify they are different playlists
+    assert_ne!(user_playlists.vec[0].id, shared_playlists.vec[0].id);
 }
 
 async fn create_test_playlists(playlist_service: &PlaylistService, user_id: i32) {

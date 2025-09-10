@@ -2,6 +2,7 @@ use actix_web::web::ServiceConfig;
 use actix_web::{web, HttpResponse};
 use sea_orm::DbConn;
 use swaptun_services::auth::jwt::{JwtMiddleware, RoleGuard};
+mod apple;
 mod auth;
 mod musicbrainz;
 mod notification;
@@ -30,6 +31,7 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                                 .configure(|c| users::configure_protected(c)),
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
+                        .service(web::scope("/apple").configure(|c| apple::configure(c)))
                         .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
                         .service(web::scope("/youtube").configure(|c| youtube::configure(c)))
                         .service(web::scope("/musicbrainz").configure(musicbrainz::configure))

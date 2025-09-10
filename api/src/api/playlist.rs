@@ -8,8 +8,8 @@ use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
     CreateMusicRequest, CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistsParams,
-    PlaylistOrigin, PlaylistService, SendPlaylistRequest, SpotifyService, UpdatePlaylistRequest,
-    UserService, YoutubeMusicService,
+    PlaylistOrigin, PlaylistService, SendPlaylistRequest, SharePlaylistRequest, SpotifyService,
+    UpdatePlaylistRequest, UserService, YoutubeMusicService,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -29,7 +29,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .post(add_music_to_playlist)
             .delete(remove_music_from_playlist),
     )
-    .service(web::resource("/{id}/send").post(send_playlist_to_origin));
+    .service(web::resource("/{id}/send").post(send_playlist_to_origin))
+    .service(web::resource("/{id}/share").post(share_playlist));
 }
 
 async fn get_user_playlists(
@@ -215,4 +216,23 @@ async fn send_playlist_to_origin(
             Err(AppError::InternalServerError)
         }
     }
+}
+async fn share_playlist(
+    db: web::Data<DbConn>,
+    req: web::Json<SharePlaylistRequest>,
+    path: web::Path<i32>,
+) -> Result<HttpResponse, AppError> {
+    let db: Arc<DatabaseConnection> = db.get_ref().clone().into();
+    let user_service = UserService::new(db.clone());
+    let user = user_service.find_by_id(req.user_id).await?;
+    let playlist_id: i32 = path.into_inner();
+    let playlist_service = PlaylistService::new(db.clone());
+    let playlist = playlist_service.find_by_id(playlist_id).await?;
+    if let (Some(playlist), Some(user)) = (playlist, user) {
+        playlist_service.share_playlist(&user, &playlist).await?;
+    } else {
+        error!("Either playlist or user not found");
+    }
+    // Share playlist based on its destination
+    Ok(HttpResponse::NoContent().finish())
 }

@@ -120,6 +120,7 @@ mod tests {
             friends_priority: false,
             limit: None,
             offset: None,
+            exclude_friends: false,
         };
 
         let req = test::TestRequest::get()
