@@ -1,9 +1,13 @@
 #[cfg(feature = "full")]
 use actix_web::{HttpResponse, ResponseError};
+#[cfg(feature = "full")]
+use apple_music_api::AppleMusicError;
+use log::error;
 use sea_orm::DbErr;
 use serde::Serialize;
+#[cfg(feature = "full")]
+use std::env::VarError;
 use std::fmt;
-use log::error;
 #[derive(Serialize)]
 pub struct ErrorResponse {
     pub status: String,
@@ -72,6 +76,22 @@ impl From<DbErr> for AppError {
 impl From<oauth2::url::ParseError> for AppError {
     fn from(_: oauth2::url::ParseError) -> Self {
         error!("Failed to parse URL");
+        AppError::InternalServerError
+    }
+}
+
+#[cfg(feature = "full")]
+impl From<AppleMusicError> for AppError {
+    fn from(err: AppleMusicError) -> Self {
+        error!("Error from apple music api {}", err);
+        AppError::InternalServerError
+    }
+}
+
+#[cfg(feature = "full")]
+impl From<VarError> for AppError {
+    fn from(err: VarError) -> Self {
+        error!("Error from environment variable: {}", err);
         AppError::InternalServerError
     }
 }

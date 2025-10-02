@@ -215,6 +215,11 @@ async fn send_playlist_to_origin(
             // For Deezer, we need to implement the functionality
             Err(AppError::InternalServerError)
         }
+
+        PlaylistOrigin::AppleMusic => {
+            // For Apple Music, we need to implement the functionality
+            Err(AppError::InternalServerError)
+        }
     }
 }
 async fn share_playlist(

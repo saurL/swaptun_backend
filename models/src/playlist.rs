@@ -11,6 +11,8 @@ pub enum PlaylistOrigin {
     Deezer,
     #[sea_orm(string_value = "YoutubeMusic")]
     YoutubeMusic,
+    #[sea_orm(string_value = "AppleMusic")]
+    AppleMusic,
 }
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "playlist")]

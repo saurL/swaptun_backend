@@ -348,7 +348,7 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 [[package]]
 name = "apple-music-api"
 version = "0.1.0"
-source = "git+https://github.com/saurL/apple-music-api.git#5deb564b5f414c4edf23a96cdcf7f05440ca337c"
+source = "git+https://github.com/saurL/apple-music-api.git#e4e69cf36dc8cb9b8017764feccf3a6057121bff"
 dependencies = [
  "base64 0.21.7",
  "chrono",
@@ -1967,7 +1967,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
