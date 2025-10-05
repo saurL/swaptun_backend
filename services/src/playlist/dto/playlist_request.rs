@@ -43,7 +43,7 @@ pub struct SharePlaylistRequest {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct SharedPlaylistResponse {
+pub struct SharedPlaylistsResponse {
     pub id: i32,
     pub playlist: PlaylistModel,
     pub shared_by: UserInfo,
