@@ -10,6 +10,7 @@ use sea_orm::IntoActiveModel;
 use swaptun_models::{MusicActiveModel, MusicModel, PlaylistModel};
 use swaptun_repositories::MusicRepository;
 
+#[derive(Clone)]
 pub struct MusicService {
     pub music_repository: MusicRepository,
 }

@@ -348,7 +348,7 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 [[package]]
 name = "apple-music-api"
 version = "0.1.0"
-source = "git+https://github.com/saurL/apple-music-api.git#e4e69cf36dc8cb9b8017764feccf3a6057121bff"
+source = "git+https://github.com/saurL/apple-music-api.git#012720de43591aa7abad1525b21cfa8bb5f947d1"
 dependencies = [
  "base64 0.21.7",
  "chrono",
@@ -1967,7 +1967,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite",
- "socket2 0.4.10",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -2060,7 +2060,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.0",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -2403,7 +2403,7 @@ dependencies = [
 [[package]]
 name = "json-crawler"
 version = "0.0.9"
-source = "git+https://github.com/saurL/youtui.git?branch=public-token#4540560031dcd15ea0fccda8b06e5d8672f65fa4"
+source = "git+https://github.com/saurL/youtui.git?branch=public-token#0b2a66038b0c63d2a404e71f251cd9330f7084b9"
 dependencies = [
  "serde",
  "serde_json",
@@ -5940,7 +5940,7 @@ dependencies = [
 [[package]]
 name = "ytmapi-rs"
 version = "0.1.0"
-source = "git+https://github.com/saurL/youtui.git?branch=public-token#4540560031dcd15ea0fccda8b06e5d8672f65fa4"
+source = "git+https://github.com/saurL/youtui.git?branch=public-token#0b2a66038b0c63d2a404e71f251cd9330f7084b9"
 dependencies = [
  "chrono",
  "const_format",

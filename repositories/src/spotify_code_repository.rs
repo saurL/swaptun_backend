@@ -6,6 +6,7 @@ use swaptun_models::{
     SpotifyCodeActiveModel, SpotifyCodeColumn, SpotifyCodeEntity, SpotifyCodeModel, UserModel,
 };
 
+#[derive(Clone)]
 pub struct SpotifyCodeRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -49,6 +50,13 @@ impl SpotifyCodeRepository {
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
         SpotifyCodeEntity::delete_by_id(id)
+            .exec(self.db.as_ref())
+            .await
+    }
+
+    pub async fn delete_by_user_id(&self, user_id: i32) -> Result<DeleteResult, DbErr> {
+        SpotifyCodeEntity::delete_many()
+            .filter(SpotifyCodeColumn::UserId.eq(user_id))
             .exec(self.db.as_ref())
             .await
     }

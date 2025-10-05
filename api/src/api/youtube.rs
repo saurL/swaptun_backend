@@ -8,7 +8,8 @@ use swaptun_services::{UserService, YoutubeMusicService};
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/authorization-url", web::get().to(get_authorization_url))
         .service(web::resource("/token").post(set_token))
-        .route("/playlists", web::get().to(get_playlists));
+        .route("/playlists", web::get().to(get_playlists))
+        .route("/disconnect", web::delete().to(disconnect));
 }
 
 async fn get_authorization_url(
@@ -55,4 +56,20 @@ async fn get_playlists(
     let user = user_service.get_user_from_claims(claims).await?;
     let playlists = youtube_service.get_user_playlists(&user).await?;
     Ok(HttpResponse::Ok().json(playlists))
+}
+
+async fn disconnect(
+    db: web::Data<DbConn>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let youtube_service = YoutubeMusicService::new(db.get_ref().clone().into());
+    let user_service = UserService::new(db.get_ref().clone().into());
+
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+
+    youtube_service.disconnect(&user).await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }

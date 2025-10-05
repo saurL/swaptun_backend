@@ -1,3 +1,5 @@
+use chrono::DateTime;
+use sea_orm::sqlx::types::uuid::timestamp;
 use sea_orm::DeleteResult;
 use sea_orm::ModelTrait;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
@@ -72,11 +74,10 @@ impl FcmTokenRepository {
 
     pub async fn deactivate_token(&self, id: i32) -> Result<Option<FcmTokenModel>, DbErr> {
         let token = self.find_by_id(id).await?;
-
         if let Some(token) = token {
             let mut active_model: FcmTokenActiveModel = token.into();
             active_model.is_active = sea_orm::Set(false);
-            active_model.updated_on = sea_orm::Set(chrono::Utc::now().naive_utc());
+            active_model.updated_on = sea_orm::Set(chrono::Utc::now().fixed_offset());
 
             Ok(Some(active_model.update(self.db.as_ref()).await?))
         } else {
@@ -90,7 +91,7 @@ impl FcmTokenRepository {
         if let Some(token) = token {
             let mut active_model: FcmTokenActiveModel = token.into();
             active_model.is_active = sea_orm::Set(true);
-            active_model.updated_on = sea_orm::Set(chrono::Utc::now().naive_utc());
+            active_model.updated_on = sea_orm::Set(chrono::Utc::now().fixed_offset());
 
             Ok(Some(active_model.update(self.db.as_ref()).await?))
         } else {
@@ -125,11 +126,12 @@ impl FcmTokenRepository {
             active_model.device_id = sea_orm::Set(device_id);
             active_model.platform = sea_orm::Set(platform);
             active_model.is_active = sea_orm::Set(true);
-            active_model.updated_on = sea_orm::Set(chrono::Utc::now().naive_utc());
+            active_model.updated_on = sea_orm::Set(chrono::Utc::now().fixed_offset());
 
             active_model.update(self.db.as_ref()).await
         } else {
             // Créer un nouveau token
+            let now = chrono::Utc::now().fixed_offset();
             let new_token = FcmTokenActiveModel {
                 id: sea_orm::NotSet,
                 user_id: sea_orm::Set(user_id),
@@ -137,8 +139,8 @@ impl FcmTokenRepository {
                 device_id: sea_orm::Set(device_id),
                 platform: sea_orm::Set(platform),
                 is_active: sea_orm::Set(true),
-                created_on: sea_orm::Set(chrono::Utc::now().naive_utc()),
-                updated_on: sea_orm::Set(chrono::Utc::now().naive_utc()),
+                created_on: sea_orm::Set(now),
+                updated_on: sea_orm::Set(now),
             };
 
             new_token.insert(self.db.as_ref()).await

@@ -7,8 +7,9 @@ use sea_orm::{DatabaseConnection, DbConn};
 use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
-    CreateMusicRequest, CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistsParams,
-    PlaylistOrigin, PlaylistService, SendPlaylistRequest, SharePlaylistRequest, SpotifyService,
+    AppleMusicService, CreateMusicRequest, CreatePlaylistRequest, DeezerService,
+    DeletePlaylistRequest, GetPlaylistsParams, NotificationService, PlaylistOrigin,
+    PlaylistService, SendPlaylistRequest, SharePlaylistRequest, SpotifyService,
     UpdatePlaylistRequest, UserService, YoutubeMusicService,
 };
 
@@ -18,6 +19,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .get(get_user_playlists)
             .post(create_playlist),
     )
+    .service(web::resource("/shared").get(get_shared_playlists))
     .service(
         web::resource("/{id}")
             .get(get_playlist)
@@ -47,6 +49,21 @@ async fn get_user_playlists(
     let playlists = playlist_service
         .get_user_playlist(user, query.into_inner())
         .await?;
+
+    Ok(HttpResponse::Ok().json(playlists))
+}
+
+async fn get_shared_playlists(
+    db: web::Data<DbConn>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let claims = claims.into_inner();
+
+    let user_service = UserService::new(db.get_ref().clone().into());
+    let user = user_service.get_user_from_claims(claims).await?;
+
+    let playlist_service = PlaylistService::new(db.get_ref().clone().into());
+    let playlists = playlist_service.get_shared_playlists_with_details(&user).await?;
 
     Ok(HttpResponse::Ok().json(playlists))
 }
@@ -211,33 +228,91 @@ async fn send_playlist_to_origin(
                     e
                 })
         }
-        PlaylistOrigin::Deezer => {
-            // For Deezer, we need to implement the functionality
-            Err(AppError::InternalServerError)
-        }
+        PlaylistOrigin::Deezer => Err(AppError::InternalServerError),
 
         PlaylistOrigin::AppleMusic => {
-            // For Apple Music, we need to implement the functionality
-            Err(AppError::InternalServerError)
+            let apple_service = AppleMusicService::new(db.clone());
+
+            apple_service
+                .export_playlist_to_apple(playlist_id, &user)
+                .await
+                .map(|playlist_id| {
+                    format!(
+                        "Playlist sent to Apple Music successfully with ID: {}",
+                        playlist_id
+                    )
+                })
         }
     }
 }
 async fn share_playlist(
     db: web::Data<DbConn>,
     req: web::Json<SharePlaylistRequest>,
+    claims: web::ReqData<Claims>,
     path: web::Path<i32>,
 ) -> Result<HttpResponse, AppError> {
     let db: Arc<DatabaseConnection> = db.get_ref().clone().into();
     let user_service = UserService::new(db.clone());
-    let user = user_service.find_by_id(req.user_id).await?;
+
+    // Get the user who is sharing (current authenticated user)
+    let current_user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+
+    // Get the user to share with
+    let shared_with_user = user_service.find_by_id(req.user_id).await?;
     let playlist_id: i32 = path.into_inner();
     let playlist_service = PlaylistService::new(db.clone());
     let playlist = playlist_service.find_by_id(playlist_id).await?;
-    if let (Some(playlist), Some(user)) = (playlist, user) {
-        playlist_service.share_playlist(&user, &playlist).await?;
+
+    if let (Some(playlist), Some(shared_with_user)) = (playlist, shared_with_user) {
+        playlist_service
+            .share_playlist(&shared_with_user, &playlist, &current_user)
+            .await?;
+
+        // Envoyer une notification à l'utilisateur
+        match NotificationService::new(db.clone()).await {
+            Ok(notification_service) => {
+                let shared_by_name = format!("{} {}", current_user.first_name, current_user.last_name);
+                let title = "New Shared Playlist".to_string();
+                let body = format!(
+                    "{} shared the playlist '{}' with you",
+                    shared_by_name, playlist.name
+                );
+
+                let mut data = std::collections::HashMap::new();
+                data.insert("type".to_string(), "playlist_shared".to_string());
+                data.insert("playlist_id".to_string(), playlist.id.to_string());
+                data.insert("playlist_name".to_string(), playlist.name.clone());
+                data.insert("shared_by_id".to_string(), current_user.id.to_string());
+                data.insert("shared_by_username".to_string(), current_user.username.clone());
+                data.insert("shared_by_name".to_string(), shared_by_name.clone());
+                data.insert("route".to_string(), "/home/shared".to_string());
+
+                match notification_service
+                    .send_notification_to_user(shared_with_user.id, title, body, Some(data))
+                    .await
+                {
+                    Ok(_) => {
+                        log::info!(
+                            "Notification sent to user {} for playlist {} shared by {}",
+                            shared_with_user.id,
+                            playlist.id,
+                            current_user.id
+                        );
+                    }
+                    Err(e) => {
+                        error!("Failed to send notification to user {}: {:?}", shared_with_user.id, e);
+                    }
+                }
+            }
+            Err(e) => {
+                error!("Failed to initialize notification service: {:?}", e);
+            }
+        }
     } else {
         error!("Either playlist or user not found");
     }
-    // Share playlist based on its destination
+
     Ok(HttpResponse::NoContent().finish())
 }

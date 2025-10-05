@@ -7,6 +7,7 @@ use swaptun_models::{
     AppleTokenActiveModel, AppleTokenColumn, AppleTokenEntity, AppleTokenModel, UserModel,
 };
 
+#[derive(Clone)]
 pub struct AppleTokenRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -43,6 +44,13 @@ impl AppleTokenRepository {
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
         AppleTokenEntity::delete_by_id(id)
+            .exec(self.db.as_ref())
+            .await
+    }
+
+    pub async fn delete_by_user_id(&self, user_id: i32) -> Result<DeleteResult, DbErr> {
+        AppleTokenEntity::delete_many()
+            .filter(AppleTokenColumn::UserId.eq(user_id))
             .exec(self.db.as_ref())
             .await
     }

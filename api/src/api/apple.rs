@@ -9,7 +9,8 @@ use swaptun_services::{AddTokenRequest, AppleMusicService, UserService};
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("/token").post(set_token))
         .service(web::resource("/developer-token").get(get_developer_token))
-        .service(web::resource("/synchronize").post(synchronize_playlist));
+        .service(web::resource("/synchronize").post(synchronize_playlist))
+        .route("/disconnect", web::delete().to(disconnect));
 }
 
 async fn set_token(
@@ -53,4 +54,20 @@ async fn synchronize_playlist(
     let apple_music_service = AppleMusicService::new(db.get_ref().clone().into());
     let _ = apple_music_service.import_playlists(&user).await?;
     Ok(HttpResponse::Ok().finish())
+}
+
+async fn disconnect(
+    db: web::Data<DbConn>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let apple_service = AppleMusicService::new(db.get_ref().clone().into());
+    let user_service = UserService::new(db.get_ref().clone().into());
+
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+
+    apple_service.disconnect(&user).await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }

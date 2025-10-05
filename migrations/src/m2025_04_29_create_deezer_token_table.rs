@@ -1,4 +1,4 @@
-use crate::m20250319_093000_create_tbl_users::TblUsers;
+use crate::m2025_03_19_create_tbl_users::TblUsers;
 use sea_orm_migration::prelude::*;
 
 #[derive(DeriveMigrationName)]
@@ -23,13 +23,13 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(TblDeezerTokens::Token).string().not_null())
                     .col(
                         ColumnDef::new(TblDeezerTokens::CreatedOn)
-                            .timestamp()
+                            .timestamp_with_time_zone()
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )
                     .col(
                         ColumnDef::new(TblDeezerTokens::UpdatedOn)
-                            .timestamp()
+                            .timestamp_with_time_zone()
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )

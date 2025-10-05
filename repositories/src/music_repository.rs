@@ -2,6 +2,7 @@ use std::sync::Arc;
 use swaptun_models::{MusicActiveModel, MusicEntity, MusicModel, PlaylistModel};
 
 use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, DeleteResult, EntityTrait, ModelTrait};
+#[derive(Clone)]
 pub struct MusicRepository {
     db: Arc<DatabaseConnection>,
 }

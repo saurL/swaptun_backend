@@ -10,7 +10,9 @@ pub struct Model {
     pub user_id: i32,
     #[sea_orm(comment = "Playlist that is shared")]
     pub playlist_id: i32,
-    pub created_on: DateTime,
+    #[sea_orm(comment = "User who shared the playlist")]
+    pub shared_by_user_id: i32,
+    pub created_on: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -27,6 +29,24 @@ pub enum Relation {
         to = "super::playlist::Column::Id"
     )]
     Playlist,
+    #[sea_orm(
+        belongs_to = "super::user::Entity",
+        from = "Column::SharedByUserId",
+        to = "super::user::Column::Id"
+    )]
+    SharedByUser,
+}
+
+impl Related<super::user::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::User.def()
+    }
+}
+
+impl Related<super::playlist::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Playlist.def()
+    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

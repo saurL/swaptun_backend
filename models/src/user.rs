@@ -1,4 +1,4 @@
-use sea_orm::{entity::prelude::*, sqlx::types::chrono::NaiveDateTime};
+use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize, Eq, Hash)]
@@ -14,9 +14,9 @@ pub struct Model {
     pub last_name: String,
     pub email: String,
     pub role: String,
-    pub created_on: NaiveDateTime,
-    pub updated_on: NaiveDateTime,
-    pub deleted_on: Option<NaiveDateTime>,
+    pub created_on: DateTimeWithTimeZone,
+    pub updated_on: DateTimeWithTimeZone,
+    pub deleted_on: Option<DateTimeWithTimeZone>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

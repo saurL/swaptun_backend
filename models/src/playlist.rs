@@ -23,8 +23,8 @@ pub struct Model {
     pub name: String,
     pub description: Option<String>,
     pub origin: PlaylistOrigin,
-    pub created_on: DateTime,
-    pub updated_on: DateTime,
+    pub created_on: DateTimeWithTimeZone,
+    pub updated_on: DateTimeWithTimeZone,
     pub origin_id: String,
 }
 

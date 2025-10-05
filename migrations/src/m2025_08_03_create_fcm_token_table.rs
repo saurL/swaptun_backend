@@ -1,6 +1,6 @@
 use sea_orm_migration::prelude::*;
 
-use crate::m20250319_093000_create_tbl_users::TblUsers;
+use crate::m2025_03_19_create_tbl_users::TblUsers;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -32,13 +32,13 @@ impl MigrationTrait for Migration {
                     )
                     .col(
                         ColumnDef::new(TblFcmTokens::CreatedOn)
-                            .timestamp()
+                            .timestamp_with_time_zone()
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )
                     .col(
                         ColumnDef::new(TblFcmTokens::UpdatedOn)
-                            .timestamp()
+                            .timestamp_with_time_zone()
                             .not_null()
                             .default(Expr::current_timestamp()),
                     )

@@ -5,6 +5,7 @@ use std::sync::Arc;
 use swaptun_models::{
     SpotifyTokenActiveModel, SpotifyTokenColumn, SpotifyTokenEntity, SpotifyTokenModel, UserModel,
 };
+#[derive(Clone)]
 pub struct SpotifyTokenRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -46,6 +47,13 @@ impl SpotifyTokenRepository {
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
         SpotifyTokenEntity::delete_by_id(id)
+            .exec(self.db.as_ref())
+            .await
+    }
+
+    pub async fn delete_by_user_id(&self, user_id: i32) -> Result<DeleteResult, DbErr> {
+        SpotifyTokenEntity::delete_many()
+            .filter(SpotifyTokenColumn::UserId.eq(user_id))
             .exec(self.db.as_ref())
             .await
     }

@@ -6,7 +6,8 @@ use crate::{
     auth::{hash_password, validate_token},
     error::AppError,
 };
-use chrono::{Duration, Local, NaiveDateTime};
+use actix_web::http::header::Date;
+use chrono::{DateTime, Duration, FixedOffset, Local, NaiveDateTime};
 use log::{info, warn};
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, DeleteResult};
 use std::sync::Arc;
@@ -63,12 +64,16 @@ impl UserService {
     pub async fn soft_delete(
         &self,
         id: i32,
-        now: NaiveDateTime,
+        now: DateTime<FixedOffset>,
     ) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.soft_delete(id, now).await
     }
 
-    pub async fn restore(&self, id: i32, now: NaiveDateTime) -> Result<Option<UserModel>, DbErr> {
+    pub async fn restore(
+        &self,
+        id: i32,
+        now: DateTime<FixedOffset>,
+    ) -> Result<Option<UserModel>, DbErr> {
         self.user_repository.restore(id, now).await
     }
 
@@ -92,7 +97,7 @@ impl UserService {
             )));
         }
 
-        let now = Local::now().naive_local();
+        let now = Local::now();
         let hashed_password = hash_password(&request.password)?;
         let user_model = UserActiveModel {
             username: Set(request.username.clone()),
@@ -101,8 +106,8 @@ impl UserService {
             last_name: Set(request.last_name.clone()),
             email: Set(request.email.clone()),
             role: Set("user".to_string()),
-            created_on: Set(now),
-            updated_on: Set(now),
+            created_on: Set(now.into()),
+            updated_on: Set(now.into()),
             ..Default::default()
         };
 
@@ -227,7 +232,7 @@ impl UserService {
 
                 active_model.role = Set("user".to_string());
 
-                active_model.updated_on = Set(Local::now().naive_local());
+                active_model.updated_on = Set(Local::now().into());
 
                 let updated_user = self.update(active_model).await?;
 
@@ -275,7 +280,7 @@ impl UserService {
                     )));
                 }
 
-                let now = Local::now().naive_local();
+                let now = Local::now().into();
                 let result = self.soft_delete(user_id, now).await?;
 
                 if result.is_some() {
@@ -310,7 +315,7 @@ impl UserService {
                     )));
                 }
 
-                let now = Local::now().naive_local();
+                let now = Local::now().into();
                 let result = self.restore(user_id, now).await?;
 
                 if result.is_some() {
@@ -467,7 +472,7 @@ impl UserService {
         // Update user's password
         let mut active_model: UserActiveModel = user.into();
         active_model.password = Set(hashed_password);
-        active_model.updated_on = Set(Local::now().naive_local());
+        active_model.updated_on = Set(Local::now().into());
 
         self.save(active_model).await?;
 

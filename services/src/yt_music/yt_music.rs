@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::Arc};
 
-use futures::future::join_all;
 use once_cell::sync::Lazy;
 use sea_orm::{DatabaseConnection, IntoActiveModel, Set};
 use swaptun_models::{PlaylistOrigin, UserModel, YoutubeTokenActiveModel, YoutubeTokenModel};
@@ -10,9 +9,7 @@ use ytmapi_rs::{
     auth::OAuthToken,
     common::{AlbumID, VideoID, YoutubeID},
     parse::{GetAlbum, LibraryPlaylist, PlaylistItem, PlaylistSong},
-    query::{
-        playlist::PrivacyStatus, watch_playlist::GetWatchPlaylistQueryID, CreatePlaylistQuery,
-    },
+    query::{playlist::PrivacyStatus, CreatePlaylistQuery},
     YtMusic,
 };
 
@@ -33,11 +30,13 @@ use std::env::var;
 use crate::AddTokenRequest;
 static VERIFIER_STORE: Lazy<Mutex<HashMap<i32, PkceCodeVerifier>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
-
+use ytmapi_rs::query::playlist::GetWatchPlaylistQueryID;
+#[derive(Clone)]
 pub struct YoutubeMusicService {
     youtube_token_repository: YoutubeTokenRepository,
     playlist_service: PlaylistService,
     music_service: MusicService,
+    db: Arc<DatabaseConnection>,
 }
 
 impl YoutubeMusicService {
@@ -50,6 +49,7 @@ impl YoutubeMusicService {
             youtube_token_repository,
             playlist_service,
             music_service,
+            db,
         }
     }
 
@@ -287,7 +287,7 @@ impl YoutubeMusicService {
             token_model.access_token.clone(),
             token_model.refresh_token.clone(),
             token_model.expires_in.clone() as usize,
-            token_model.updated_on.clone().and_utc().into(),
+            token_model.updated_on.clone().into(),
             client_id,
             client_secret,
         );
@@ -307,7 +307,7 @@ impl YoutubeMusicService {
         active_token.access_token = Set(token.access_token);
         active_token.refresh_token = Set(token.refresh_token);
         active_token.expires_in = Set(token.expires_in as i64);
-        active_token.updated_on = Set(chrono::Utc::now().naive_utc());
+        active_token.updated_on = Set(chrono::Utc::now().into());
         self.save(active_token).await?;
         Ok(client)
     }
@@ -318,23 +318,48 @@ impl YoutubeMusicService {
             error!("Failed to get library playlists: {:?}", e);
             AppError::InternalServerError
         })?;
-        let mut import_futures = Vec::new();
 
-        for playlist in &playlists {
-            let import_future = self.import_playlist(playlist, user, &client);
-            import_futures.push(import_future);
-        }
+        info!("Found {} YouTube Music playlists", playlists.len());
 
-        let import_results = join_all(import_futures).await;
+        // Spawn background task to import playlists
+        let service = self.clone();
+        let user_clone = user.clone();
+        let playlists_clone = playlists.clone();
 
-        // Vérifier s'il y a des erreurs d'importation
-        for result in import_results {
-            if let Err(e) = result {
-                error!("Error importing playlist: {:?}", e);
-                // Vous pouvez choisir de retourner une erreur ici si vous voulez
-                // return Err(e);
+        tokio::spawn(async move {
+            info!(
+                "Starting background import of {} YouTube Music playlists",
+                playlists_clone.len()
+            );
+
+            match service.get_ytmusic_client(&user_clone).await {
+                Ok(client) => {
+                    for playlist in playlists_clone {
+                        if let Err(e) = service
+                            .import_playlist(&playlist, &user_clone, &client)
+                            .await
+                        {
+                            error!(
+                                "Error importing YouTube Music playlist {:?}: {:?}",
+                                playlist.title, e
+                            );
+                        } else {
+                            info!(
+                                "Successfully imported YouTube Music playlist: {:?}",
+                                playlist.title
+                            );
+                        }
+                    }
+                    info!("Background import of YouTube Music playlists completed");
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to get YouTube Music client for background import: {:?}",
+                        e
+                    );
+                }
             }
-        }
+        });
 
         Ok(())
     }
@@ -344,14 +369,16 @@ impl YoutubeMusicService {
         playlist: &LibraryPlaylist,
         client: &YtMusic<OAuthToken>,
     ) -> Result<Vec<PlaylistSong>, AppError> {
-        let playlist = match client.get_playlist(playlist.playlist_id.clone()).await {
-            Ok(playlist) => playlist,
+        let tracks: Vec<PlaylistItem> = match client
+            .get_playlist_tracks(playlist.playlist_id.clone())
+            .await
+        {
+            Ok(tracks) => tracks,
             Err(e) => {
                 error!("Failed to load playlist {:?}: {}", playlist.playlist_id, e);
                 return Err(AppError::InternalServerError);
             }
         };
-        let tracks = playlist.tracks;
         let songs: Vec<PlaylistSong> = tracks
             .into_iter()
             .filter_map(|track| {
@@ -520,5 +547,29 @@ impl YoutubeMusicService {
                 Err(AppError::InternalServerError)
             }
         }
+    }
+
+    pub async fn disconnect(&self, user: &UserModel) -> Result<(), AppError> {
+        info!("Disconnecting YouTube Music for user {}", user.id);
+
+        // Delete playlists from YouTube Music origin
+        self.playlist_service
+            .delete_by_origin(user, PlaylistOrigin::YoutubeMusic)
+            .await?;
+
+        // Delete YouTube Music tokens
+        self.youtube_token_repository
+            .delete_by_user_id(user.id)
+            .await
+            .map_err(|e| {
+                error!("Failed to delete youtube token: {:?}", e);
+                AppError::InternalServerError
+            })?;
+
+        info!(
+            "YouTube Music disconnected successfully for user {}",
+            user.id
+        );
+        Ok(())
     }
 }

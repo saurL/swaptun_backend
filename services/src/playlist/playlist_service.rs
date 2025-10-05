@@ -4,13 +4,17 @@ use super::{
     CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistResponse, GetPlaylistsParams,
     UpdatePlaylistRequest,
 };
-use crate::error::AppError;
+use crate::{error::AppError, SharedPlaylistResponse};
 
 use log::error;
 use sea_orm::{DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
-use swaptun_models::{music_playlist, MusicModel, PlaylistActiveModel, PlaylistModel, UserModel};
+use swaptun_models::{
+    music_playlist, playlist::PlaylistOrigin, MusicModel, PlaylistActiveModel, PlaylistModel,
+    UserModel,
+};
 use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
 
+#[derive(Clone)]
 pub struct PlaylistService {
     pub playlist_repository: PlaylistRepository,
     pub music_playlist_repository: MusicPlaylistRepository,
@@ -75,6 +79,26 @@ impl PlaylistService {
                 Err(e)
             }
         }
+    }
+
+    pub async fn get_shared_playlists_with_details(
+        &self,
+        user: &UserModel,
+    ) -> Result<Vec<SharedPlaylistResponse>, AppError> {
+        let details = self
+            .playlist_repository
+            .find_shared_playlist_with_details(user)
+            .await?;
+
+        Ok(details
+            .into_iter()
+            .map(|(shared, playlist, shared_by)| SharedPlaylistResponse {
+                id: shared.id,
+                playlist,
+                shared_by: shared_by.into(),
+                shared_at: shared.created_on.into(),
+            })
+            .collect())
     }
 
     pub async fn create(
@@ -249,11 +273,12 @@ impl PlaylistService {
 
     pub async fn share_playlist(
         &self,
-        user: &UserModel,
+        shared_with_user: &UserModel,
         playlist: &PlaylistModel,
+        shared_by_user: &UserModel,
     ) -> Result<(), AppError> {
         self.playlist_repository
-            .create_shared_link(user, playlist)
+            .create_shared_link(shared_with_user, playlist, shared_by_user)
             .await?;
         Ok(())
     }
@@ -274,5 +299,17 @@ impl PlaylistService {
                 Err(AppError::InternalServerError)
             }
         }
+    }
+
+    pub async fn delete_by_origin(
+        &self,
+        user: &UserModel,
+        origin: PlaylistOrigin,
+    ) -> Result<(), AppError> {
+        self.playlist_repository
+            .delete_by_user_and_origin(user, origin)
+            .await
+            .map(|_| ())
+            .map_err(AppError::from)
     }
 }

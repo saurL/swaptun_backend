@@ -1,10 +1,9 @@
 use crate::error::AppError;
 use crate::{
-    get_track_metadata, music::dto::CreateMusicRequest, CreatePlaylistRequest, MusicService,
-    PlaylistService, SpotifyUrlResponse,
+    music::dto::CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
+    SpotifyUrlResponse,
 };
 use crate::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
-use futures::future::join_all;
 use futures::StreamExt;
 use log::{error, info};
 use rspotify::model::{PlayableId, PlayableItem, SearchResult, SimplifiedPlaylist};
@@ -25,11 +24,13 @@ use swaptun_repositories::{
 use chrono::{NaiveDate, Utc};
 use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth, Token};
 
+#[derive(Clone)]
 pub struct SpotifyService {
     spotify_code_repository: SpotifyCodeRepository,
     spotify_token_repository: SpotifyTokenRepository,
     playlist_service: PlaylistService,
     music_service: MusicService,
+    db: Arc<DatabaseConnection>,
 }
 
 impl SpotifyService {
@@ -39,6 +40,7 @@ impl SpotifyService {
             spotify_token_repository: SpotifyTokenRepository::new(db.clone()),
             playlist_service: PlaylistService::new(db.clone()),
             music_service: MusicService::new(db.clone()),
+            db,
         }
     }
 
@@ -80,7 +82,7 @@ impl SpotifyService {
                 let mut active_model = token_model.into_active_model();
                 active_model.access_token = Set(token.access_token.clone());
                 active_model.refresh_token = Set(token.refresh_token.clone());
-                active_model.expires_at = Set(token.expires_at.unwrap().naive_utc());
+                active_model.expires_at = Set(token.expires_at.unwrap().into());
                 active_model.scope = Set(Some(
                     token
                         .scopes
@@ -104,7 +106,7 @@ impl SpotifyService {
                     user_id: Set(user.id),
                     access_token: Set(token.access_token.clone()),
                     refresh_token: Set(token.refresh_token.clone()),
-                    expires_at: Set(token.expires_at.unwrap().naive_utc()),
+                    expires_at: Set(token.expires_at.unwrap().into()),
                     scope: Set(Some(
                         token
                             .scopes
@@ -219,6 +221,8 @@ impl SpotifyService {
         Ok(response)
     }
 
+    // Collecter les playlists
+
     pub async fn get_user_playlists(
         &self,
         user: UserModel,
@@ -227,28 +231,44 @@ impl SpotifyService {
         match spotify.me().await {
             Ok(spotify_user) => {
                 let mut playlist_models = Vec::new();
-                let mut import_futures = Vec::new();
                 let mut playlists = spotify.user_playlists(spotify_user.id);
 
+                // Collecter les playlists
                 while let Some(playlist_result) = playlists.next().await {
                     if let Ok(playlist) = playlist_result {
                         playlist_models.push(playlist.clone());
-                        // Créer la future d'importation sans l'attendre
-                        let import_future = self.import_playlist(playlist, &user, &spotify);
-                        import_futures.push(import_future);
-                    }
-                }
 
-                // Attendre que toutes les importations soient terminées et collecter les erreurs
-                let import_results = join_all(import_futures).await;
-                info!("Import results: {:?}", import_results);
+                        // Spawn background task to import playlists
+                        let service = self.clone();
+                        let user_clone = user.clone();
 
-                // Vérifier s'il y a des erreurs d'importation
-                for result in import_results {
-                    if let Err(e) = result {
-                        error!("Error importing playlist: {:?}", e);
-                        // Vous pouvez choisir de retourner une erreur ici si vous voulez
-                        // return Err(e);
+                        tokio::spawn(async move {
+                            match service.get_spotify_client_connected(&user_clone).await {
+                                Ok(spotify_client) => {
+                                    if let Err(e) = service
+                                        .import_playlist(
+                                            playlist.clone(),
+                                            &user_clone,
+                                            &spotify_client,
+                                        )
+                                        .await
+                                    {
+                                        error!(
+                                            "Error importing playlist {}: {:?}",
+                                            playlist.name, e
+                                        );
+                                    } else {
+                                        info!("Successfully imported playlist: {}", playlist.name);
+                                    }
+                                }
+                                Err(e) => {
+                                    error!(
+                                        "Failed to get Spotify client for background import: {:?}",
+                                        e
+                                    );
+                                }
+                            }
+                        });
                     }
                 }
 
@@ -304,31 +324,7 @@ impl SpotifyService {
                                 .unwrap_or_default();
                             let track_title = track.name.clone();
 
-                            let genre = match get_track_metadata(&track_title, &artist_name).await {
-                                Ok(Some(metadata)) => {
-                                    info!(
-                                        "Genre trouvé pour {} - {}: {}",
-                                        artist_name,
-                                        track_title,
-                                        metadata
-                                            .genre
-                                            .clone()
-                                            .unwrap_or_else(|| "Inconnu".to_string())
-                                    );
-                                    metadata.genre
-                                }
-                                Ok(None) => {
-                                    info!(
-                                        "Pas de genre trouvé pour {} - {}",
-                                        artist_name, track_title
-                                    );
-                                    None
-                                }
-                                Err(e) => {
-                                    error!("Erreur lors de la récupération du genre via MusicBrainz: {:?}", e);
-                                    None
-                                }
-                            };
+                            let genre = None;
 
                             let create_music_request = CreateMusicRequest {
                                 title: track_title,
@@ -379,11 +375,11 @@ impl SpotifyService {
         let mut spotify = self.get_spotify_client().await?;
         let token: Option<SpotifyTokenModel> = self.get_token(&user_model).await;
         if let Some(token) = token {
-            let expires_in = token.expires_at.and_utc().signed_duration_since(Utc::now());
+            let expires_in = token.expires_at.signed_duration_since(Utc::now());
             spotify.token = Arc::new(rspotify::sync::Mutex::new(Some(Token {
                 access_token: token.access_token,
                 refresh_token: token.refresh_token,
-                expires_at: Some(token.expires_at.and_utc()),
+                expires_at: Some(token.expires_at.into()),
                 expires_in: expires_in.clone(),
                 scopes: scopes!(
                     "playlist-read-private playlist-modify-public playlist-modify-private user-read-email"
@@ -584,5 +580,29 @@ impl SpotifyService {
         }
 
         Ok(new_playlist.id.to_string())
+    }
+
+    pub async fn disconnect(&self, user: &UserModel) -> Result<(), AppError> {
+        info!("Disconnecting Spotify for user {}", user.id);
+
+        // Delete playlists from Spotify origin
+        self.playlist_service
+            .delete_by_origin(user, PlaylistOrigin::Spotify)
+            .await?;
+
+        // Delete Spotify tokens
+        self.spotify_token_repository
+            .delete_by_user_id(user.id)
+            .await
+            .map_err(AppError::from)?;
+
+        // Delete Spotify codes
+        self.spotify_code_repository
+            .delete_by_user_id(user.id)
+            .await
+            .map_err(AppError::from)?;
+
+        info!("Spotify disconnected successfully for user {}", user.id);
+        Ok(())
     }
 }

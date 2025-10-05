@@ -1,20 +1,24 @@
 use std::sync::Arc;
 
 use crate::error::AppError;
+use crate::playlist::playlist_service::PlaylistService;
 use crate::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
+use log::{error, info};
 use sea_orm::IntoActiveModel;
 use sea_orm::{ActiveValue::Set, DatabaseConnection};
-use swaptun_models::{DeezerTokenActiveModel, UserModel};
+use swaptun_models::{playlist::PlaylistOrigin, DeezerTokenActiveModel, UserModel};
 use swaptun_repositories::deezer_token_repository::DeezerTokenRepository;
 
 pub struct DeezerService {
     deezer_token_repository: DeezerTokenRepository,
+    playlist_service: PlaylistService,
 }
 
 impl DeezerService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self {
-            deezer_token_repository: DeezerTokenRepository::new(db),
+            deezer_token_repository: DeezerTokenRepository::new(db.clone()),
+            playlist_service: PlaylistService::new(db),
         }
     }
 
@@ -102,5 +106,26 @@ impl DeezerService {
             .get_token(user_model)
             .await
             .map_err(AppError::from)
+    }
+
+    pub async fn disconnect(&self, user: &UserModel) -> Result<(), AppError> {
+        info!("Disconnecting Deezer for user {}", user.id);
+
+        // Delete playlists from Deezer origin
+        self.playlist_service
+            .delete_by_origin(user, PlaylistOrigin::Deezer)
+            .await?;
+
+        // Delete Deezer tokens
+        self.deezer_token_repository
+            .delete_by_user_id(user.id)
+            .await
+            .map_err(|e| {
+                error!("Failed to delete deezer token: {:?}", e);
+                AppError::InternalServerError
+            })?;
+
+        info!("Deezer disconnected successfully for user {}", user.id);
+        Ok(())
     }
 }

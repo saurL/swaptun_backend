@@ -10,7 +10,7 @@ pub struct Model {
     pub user_id: i32,
     #[sea_orm(comment = "User who is the friend")]
     pub friend_id: i32,
-    pub created_on: DateTime,
+    pub created_on: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

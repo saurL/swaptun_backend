@@ -11,8 +11,8 @@ pub struct Model {
     pub device_id: Option<String>,
     pub platform: Option<String>, // "android", "ios", "web"
     pub is_active: bool,
-    pub created_on: DateTime,
-    pub updated_on: DateTime,
+    pub created_on: DateTimeWithTimeZone,
+    pub updated_on: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

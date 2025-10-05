@@ -8,6 +8,7 @@ use swaptun_models::{
     MusicPlaylistModel, PlaylistModel,
 };
 
+#[derive(Clone)]
 pub struct MusicPlaylistRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -81,6 +82,13 @@ impl MusicPlaylistRepository {
                 ),
             )
             .one(self.db.as_ref())
+            .await
+    }
+
+    pub async fn delete_by_playlist_id(&self, playlist_id: i32) -> Result<DeleteResult, DbErr> {
+        MusicPlaylistEntity::delete_many()
+            .filter(MusicPlaylistColumn::PlaylistId.eq(playlist_id))
+            .exec(self.db.as_ref())
             .await
     }
 }

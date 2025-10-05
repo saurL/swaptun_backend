@@ -1,5 +1,5 @@
 
-use sea_orm::{entity::prelude::*, sqlx::types::chrono::NaiveDateTime};
+use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
@@ -11,8 +11,8 @@ pub struct Model {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_in: i64,
-    pub created_on: NaiveDateTime,
-    pub updated_on: NaiveDateTime,
+    pub created_on: DateTimeWithTimeZone,
+    pub updated_on: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

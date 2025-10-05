@@ -4,6 +4,7 @@ use sea_orm::DbConn;
 use swaptun_services::auth::jwt::{JwtMiddleware, RoleGuard};
 mod apple;
 mod auth;
+mod deezer;
 mod musicbrainz;
 mod notification;
 mod playlist;
@@ -32,6 +33,7 @@ pub fn configure_routes(cfg: &mut ServiceConfig, db: DbConn) {
                         )
                         .service(web::scope("/spotify").configure(|c| spotify::configure(c)))
                         .service(web::scope("/apple").configure(|c| apple::configure(c)))
+                        .service(web::scope("/deezer").configure(|c| deezer::configure(c)))
                         .service(web::scope("/playlists").configure(|c| playlist::configure(c)))
                         .service(web::scope("/youtube").configure(|c| youtube::configure(c)))
                         .service(web::scope("/musicbrainz").configure(musicbrainz::configure))

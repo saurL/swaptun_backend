@@ -7,6 +7,7 @@ use swaptun_models::{
     YoutubeTokenActiveModel, YoutubeTokenColumn, YoutubeTokenEntity, YoutubeTokenModel, UserModel,
 };
 
+#[derive(Clone)]
 pub struct YoutubeTokenRepository {
     db: Arc<DatabaseConnection>,
 }
@@ -48,6 +49,13 @@ impl YoutubeTokenRepository {
 
     pub async fn delete(&self, id: i32) -> Result<DeleteResult, DbErr> {
         YoutubeTokenEntity::delete_by_id(id)
+            .exec(self.db.as_ref())
+            .await
+    }
+
+    pub async fn delete_by_user_id(&self, user_id: i32) -> Result<DeleteResult, DbErr> {
+        YoutubeTokenEntity::delete_many()
+            .filter(YoutubeTokenColumn::UserId.eq(user_id))
             .exec(self.db.as_ref())
             .await
     }

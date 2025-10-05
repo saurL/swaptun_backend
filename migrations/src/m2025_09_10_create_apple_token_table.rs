@@ -1,6 +1,5 @@
+use crate::m2025_03_19_create_tbl_users::TblUsers;
 use sea_orm_migration::prelude::*;
-
-use crate::m20250319_093000_create_tbl_users::TblUsers;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;
@@ -11,32 +10,37 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(TblSpotifyCodes::Table)
+                    .table(TblAppleToken::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(TblSpotifyCodes::Id)
+                        ColumnDef::new(TblAppleToken::Id)
                             .integer()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(TblSpotifyCodes::UserId).integer().not_null())
-                    .col(ColumnDef::new(TblSpotifyCodes::Token).string().not_null())
+                    .col(ColumnDef::new(TblAppleToken::UserId).integer().not_null())
                     .col(
-                        ColumnDef::new(TblSpotifyCodes::CreatedOn)
-                            .timestamp()
-                            .not_null()
-                            .default(Expr::current_timestamp()),
+                        ColumnDef::new(TblAppleToken::AccessToken)
+                            .string()
+                            .not_null(),
                     )
                     .col(
-                        ColumnDef::new(TblSpotifyCodes::UpdatedOn)
-                            .timestamp()
+                        ColumnDef::new(TblAppleToken::CreatedOn)
+                            .timestamp_with_time_zone()
                             .not_null()
-                            .default(Expr::current_timestamp()),
+                            .default(SimpleExpr::Keyword(Keyword::CurrentTimestamp)),
+                    )
+                    .col(
+                        ColumnDef::new(TblAppleToken::UpdatedOn)
+                            .timestamp_with_time_zone()
+                            .not_null()
+                            .default(SimpleExpr::Keyword(Keyword::CurrentTimestamp)),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .from(TblSpotifyCodes::Table, TblSpotifyCodes::UserId)
+                            .name("fk_apple_token_user")
+                            .from(TblAppleToken::Table, TblAppleToken::UserId)
                             .to(TblUsers::Table, TblUsers::Id),
                     )
                     .to_owned(),
@@ -46,17 +50,17 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(TblSpotifyCodes::Table).to_owned())
+            .drop_table(Table::drop().table(TblAppleToken::Table).to_owned())
             .await
     }
 }
 
-#[derive(Iden)]
-pub enum TblSpotifyCodes {
+#[derive(DeriveIden)]
+enum TblAppleToken {
     Table,
     Id,
     UserId,
-    Token,
+    AccessToken,
     CreatedOn,
     UpdatedOn,
 }

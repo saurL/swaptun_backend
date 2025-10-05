@@ -9,10 +9,10 @@ pub struct Model {
     pub user_id: i32,
     pub access_token: String,
     pub refresh_token: Option<String>,
-    pub expires_at: DateTime,
+    pub expires_at: DateTimeWithTimeZone,
     pub scope: Option<String>,
-    pub created_on: DateTime,
-    pub updated_on: DateTime,
+    pub created_on: DateTimeWithTimeZone,
+    pub updated_on: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -8,7 +8,8 @@ use swaptun_services::{AddTokenRequest, SpotifyService, UserService};
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/authorization-url", web::get().to(get_authorization_url))
         .service(web::resource("/token").post(set_token))
-        .route("/playlist", web::post().to(post_user_playlists));
+        .route("/playlist", web::post().to(post_user_playlists))
+        .route("/disconnect", web::delete().to(disconnect));
 }
 
 async fn get_authorization_url(
@@ -54,4 +55,20 @@ async fn post_user_playlists(
     } else {
         Err(AppError::Unauthorized("Unauthorized".to_string()))
     }
+}
+
+async fn disconnect(
+    db: web::Data<DbConn>,
+    claims: web::ReqData<Claims>,
+) -> Result<HttpResponse, AppError> {
+    let spotify_service = SpotifyService::new(db.get_ref().clone().into());
+    let user_service = UserService::new(db.get_ref().clone().into());
+
+    let user = user_service
+        .get_user_from_claims(claims.into_inner())
+        .await?;
+
+    spotify_service.disconnect(&user).await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }

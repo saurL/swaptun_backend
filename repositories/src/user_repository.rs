@@ -1,3 +1,4 @@
+use sea_orm::prelude::DateTimeWithTimeZone;
 use sea_orm::{prelude::*, DeleteResult, Order, QueryOrder};
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter,
@@ -57,9 +58,13 @@ impl UserRepository {
         UserEntity::delete_by_id(id).exec(self.db.as_ref()).await
     }
 
-    pub async fn soft_delete(&self, id: i32, now: DateTime) -> Result<Option<UserModel>, DbErr> {
+    pub async fn soft_delete(
+        &self,
+        id: i32,
+        now: DateTimeWithTimeZone,
+    ) -> Result<Option<UserModel>, DbErr> {
         let user = self.find_by_id(id).await?;
-
+        let now = chrono::Utc::now().fixed_offset();
         if let Some(user) = user {
             let mut active_model: UserActiveModel = user.into();
             active_model.deleted_on = Set(Some(now));
@@ -71,7 +76,11 @@ impl UserRepository {
         }
     }
 
-    pub async fn restore(&self, id: i32, now: DateTime) -> Result<Option<UserModel>, DbErr> {
+    pub async fn restore(
+        &self,
+        id: i32,
+        now: DateTimeWithTimeZone,
+    ) -> Result<Option<UserModel>, DbErr> {
         let user = self.find_by_id(id).await?;
 
         if let Some(user) = user {
