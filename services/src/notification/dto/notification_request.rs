@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use validator::Validate;
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -12,7 +13,7 @@ pub struct NotificationRequest {
     #[validate(length(min = 1, message = "Body is required"))]
     pub body: String,
 
-    pub data: Option<HashMap<String, String>>,
+    pub data: Option<Value>,
     pub image: Option<String>,
     pub sound: Option<String>,
     pub badge: Option<String>,
@@ -31,7 +32,7 @@ pub struct MulticastNotificationRequest {
     #[validate(length(min = 1, message = "Body is required"))]
     pub body: String,
 
-    pub data: Option<HashMap<String, String>>,
+    pub data: Option<Value>,
     pub image: Option<String>,
     pub sound: Option<String>,
     pub badge: Option<String>,
@@ -50,7 +51,7 @@ pub struct TopicNotificationRequest {
     #[validate(length(min = 1, message = "Body is required"))]
     pub body: String,
 
-    pub data: Option<HashMap<String, String>>,
+    pub data: Option<Value>,
     pub image: Option<String>,
     pub sound: Option<String>,
     pub badge: Option<String>,
@@ -141,7 +142,7 @@ pub struct SendTestNotificationRequest {
     #[validate(length(min = 1, message = "Body is required"))]
     pub body: String,
 
-    pub data: Option<HashMap<String, String>>,
+    pub data: Option<Value>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

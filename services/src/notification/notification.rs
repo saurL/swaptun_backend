@@ -12,6 +12,7 @@ use google_fcm1::{hyper_util, FirebaseCloudMessaging};
 use log::{error, info};
 use sea_orm::DatabaseConnection;
 use swaptun_repositories::FcmTokenRepository;
+use ytmapi_rs::json::Json;
 pub struct NotificationService {
     fcm_hub:
         FirebaseCloudMessaging<HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>>,
@@ -88,7 +89,25 @@ impl NotificationService {
 
         // Ajout des données personnalisées
         if let Some(data) = &request.data {
-            message.data = Some(data.clone());
+            // Convertir serde_json::Value en HashMap<String, String>
+            // FCM attend toutes les valeurs en tant que strings
+            info!("Adding data to notification: {:?}", data);
+            let data_map: std::collections::HashMap<String, String> = data
+                .as_object()
+                .map(|obj| {
+                    obj.iter()
+                        .map(|(k, v)| {
+                            let value_str = match v {
+                                serde_json::Value::String(s) => s.clone(),
+                                _ => v.to_string(),
+                            };
+                            (k.clone(), value_str)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            message.data = Some(data_map);
         }
 
         // Configuration Android si nécessaire
@@ -237,7 +256,24 @@ impl NotificationService {
 
         // Ajout des données personnalisées
         if let Some(data) = &request.data {
-            message.data = Some(data.clone());
+            // Convertir serde_json::Value en HashMap<String, String>
+            // FCM attend toutes les valeurs en tant que strings
+            let data_map: std::collections::HashMap<String, String> = data
+                .as_object()
+                .map(|obj| {
+                    obj.iter()
+                        .map(|(k, v)| {
+                            let value_str = match v {
+                                serde_json::Value::String(s) => s.clone(),
+                                _ => v.to_string(),
+                            };
+                            (k.clone(), value_str)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            message.data = Some(data_map);
         }
 
         // Configuration Android si nécessaire
@@ -471,7 +507,7 @@ impl NotificationService {
         user_id: i32,
         title: String,
         body: String,
-        data: Option<std::collections::HashMap<String, String>>,
+        data: Option<serde_json::Value>,
     ) -> Result<Vec<NotificationResponse>, AppError> {
         let tokens = self.get_user_fcm_token(user_id).await?;
         let mut responses = Vec::new();

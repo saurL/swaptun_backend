@@ -4,7 +4,7 @@ use super::{
     CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistResponse, GetPlaylistsParams,
     UpdatePlaylistRequest,
 };
-use crate::{error::AppError, SharedPlaylistResponse};
+use crate::{error::AppError, SharedPlaylist, SharedPlaylistsResponse, UserInfo};
 
 use log::error;
 use sea_orm::{DatabaseConnection, DbErr, DeleteResult, IntoActiveModel};
@@ -84,21 +84,21 @@ impl PlaylistService {
     pub async fn get_shared_playlists_with_details(
         &self,
         user: &UserModel,
-    ) -> Result<Vec<SharedPlaylistResponse>, AppError> {
+    ) -> Result<SharedPlaylistsResponse, AppError> {
         let details = self
             .playlist_repository
             .find_shared_playlist_with_details(user)
             .await?;
-
-        Ok(details
-            .into_iter()
-            .map(|(shared, playlist, shared_by)| SharedPlaylistResponse {
+        let mut shared_playlists = Vec::new();
+        details.into_iter().map(|(shared, playlist, shared_by)| {
+            shared_playlists.push(SharedPlaylist {
                 id: shared.id,
                 playlist,
                 shared_by: shared_by.into(),
                 shared_at: shared.created_on.into(),
-            })
-            .collect())
+            });
+        });
+        Ok(SharedPlaylistsResponse { shared_playlists })
     }
 
     pub async fn create(

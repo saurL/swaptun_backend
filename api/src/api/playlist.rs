@@ -284,24 +284,18 @@ async fn share_playlist(
                 );
 
                 // Structure des données de notification
-                let mut shared_notification = std::collections::HashMap::new();
-                shared_notification.insert("playlist_id".to_string(), playlist.id.to_string());
-                shared_notification.insert("playlist_name".to_string(), playlist.name.clone());
-                shared_notification.insert("shared_by_id".to_string(), current_user.id.to_string());
-                shared_notification.insert(
-                    "shared_by_username".to_string(),
-                    current_user.username.clone(),
-                );
-                shared_notification.insert("shared_by_name".to_string(), shared_by_name.clone());
+                let shared_notification = serde_json::json!({
+                    "playlist_id": playlist.id,
+                    "playlist_name": playlist.name.clone(),
+                    "shared_by_id": current_user.id,
+                    "shared_by_username": current_user.username.clone(),
+                });
 
-                // Convertir en JSON string pour l'envoyer dans data
-                let shared_notification_json = serde_json::to_string(&shared_notification)
-                    .unwrap_or_else(|_| "{}".to_string());
-
-                let mut data = std::collections::HashMap::new();
-                data.insert("type".to_string(), "playlist_shared".to_string());
-                data.insert("shared_notification".to_string(), shared_notification_json);
-                data.insert("route".to_string(), "/home/shared".to_string());
+                let data = serde_json::json!({
+                    "type": "playlist_shared",
+                    "shared_notification": shared_notification,
+                    "route": "/home/shared"
+                });
 
                 match notification_service
                     .send_notification_to_user(shared_with_user.id, title, body, Some(data))

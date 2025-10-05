@@ -44,6 +44,11 @@ pub struct SharePlaylistRequest {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct SharedPlaylistsResponse {
+    pub shared_playlists: Vec<SharedPlaylist>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct SharedPlaylist {
     pub id: i32,
     pub playlist: PlaylistModel,
     pub shared_by: UserInfo,
@@ -54,8 +59,6 @@ pub struct SharedPlaylistsResponse {
 pub struct UserInfo {
     pub id: i32,
     pub username: String,
-    pub first_name: String,
-    pub last_name: String,
 }
 
 impl From<UserModel> for UserInfo {
@@ -63,8 +66,6 @@ impl From<UserModel> for UserInfo {
         UserInfo {
             id: user.id,
             username: user.username,
-            first_name: user.first_name,
-            last_name: user.last_name,
         }
     }
 }
