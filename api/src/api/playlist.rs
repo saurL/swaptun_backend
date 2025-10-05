@@ -63,7 +63,9 @@ async fn get_shared_playlists(
     let user = user_service.get_user_from_claims(claims).await?;
 
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
-    let playlists = playlist_service.get_shared_playlists_with_details(&user).await?;
+    let playlists = playlist_service
+        .get_shared_playlists_with_details(&user)
+        .await?;
 
     Ok(HttpResponse::Ok().json(playlists))
 }
@@ -273,20 +275,32 @@ async fn share_playlist(
         // Envoyer une notification à l'utilisateur
         match NotificationService::new(db.clone()).await {
             Ok(notification_service) => {
-                let shared_by_name = format!("{} {}", current_user.first_name, current_user.last_name);
+                let shared_by_name =
+                    format!("{} {}", current_user.first_name, current_user.last_name);
                 let title = "New Shared Playlist".to_string();
                 let body = format!(
                     "{} shared the playlist '{}' with you",
                     shared_by_name, playlist.name
                 );
 
+                // Structure des données de notification
+                let mut shared_notification = std::collections::HashMap::new();
+                shared_notification.insert("playlist_id".to_string(), playlist.id.to_string());
+                shared_notification.insert("playlist_name".to_string(), playlist.name.clone());
+                shared_notification.insert("shared_by_id".to_string(), current_user.id.to_string());
+                shared_notification.insert(
+                    "shared_by_username".to_string(),
+                    current_user.username.clone(),
+                );
+                shared_notification.insert("shared_by_name".to_string(), shared_by_name.clone());
+
+                // Convertir en JSON string pour l'envoyer dans data
+                let shared_notification_json = serde_json::to_string(&shared_notification)
+                    .unwrap_or_else(|_| "{}".to_string());
+
                 let mut data = std::collections::HashMap::new();
                 data.insert("type".to_string(), "playlist_shared".to_string());
-                data.insert("playlist_id".to_string(), playlist.id.to_string());
-                data.insert("playlist_name".to_string(), playlist.name.clone());
-                data.insert("shared_by_id".to_string(), current_user.id.to_string());
-                data.insert("shared_by_username".to_string(), current_user.username.clone());
-                data.insert("shared_by_name".to_string(), shared_by_name.clone());
+                data.insert("shared_notification".to_string(), shared_notification_json);
                 data.insert("route".to_string(), "/home/shared".to_string());
 
                 match notification_service
@@ -302,7 +316,10 @@ async fn share_playlist(
                         );
                     }
                     Err(e) => {
-                        error!("Failed to send notification to user {}: {:?}", shared_with_user.id, e);
+                        error!(
+                            "Failed to send notification to user {}: {:?}",
+                            shared_with_user.id, e
+                        );
                     }
                 }
             }
