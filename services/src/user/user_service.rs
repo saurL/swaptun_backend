@@ -123,6 +123,7 @@ impl UserService {
         request: GetUsersRequest,
     ) -> Result<Vec<UserModel>, DbErr> {
         let include_deleted = request.include_deleted.unwrap_or(false);
+        let exclude_self = request.exclude_self.unwrap_or(false);
         info!("get User Request: {:?}", request);
         let users = self
             .user_repository
@@ -135,6 +136,7 @@ impl UserService {
                 request.offset,
                 request.friends_priority,
                 request.exclude_friends,
+                exclude_self,
             )
             .await?;
 
@@ -500,6 +502,13 @@ impl UserService {
     }
 
     pub async fn add_friend(&self, user_id: i32, friend_id: i32) -> Result<(), AppError> {
+        // Check if user is trying to add themselves
+        if user_id == friend_id {
+            return Err(AppError::Validation(
+                "Cannot add yourself as a friend".to_string(),
+            ));
+        }
+
         // Check if both users exist
         let user = self.find_by_id(user_id).await?;
         let friend = self.find_by_id(friend_id).await?;
@@ -518,21 +527,25 @@ impl UserService {
             )));
         }
 
-        // Check if friendship already exists (in either direction)
+        // Check if this specific user already added this friend (unidirectional)
         if let Some(_) = self
             .friendship_repository
-            .find_friendship_bidirectional(user_id, friend_id)
+            .find_friendship(user_id, friend_id)
             .await?
         {
             return Err(AppError::Validation(
-                "Friendship already exists".to_string(),
+                "You have already added this user as a friend".to_string(),
             ));
         }
 
-        // Create mutual friendship
-        self.friendship_repository
-            .create_mutual_friendship(user_id, friend_id)
-            .await?;
+        // Create unidirectional friendship (only user_id -> friend_id)
+        let friendship = swaptun_models::friendship::ActiveModel {
+            user_id: sea_orm::Set(user_id),
+            friend_id: sea_orm::Set(friend_id),
+            ..Default::default()
+        };
+
+        self.friendship_repository.create(friendship).await?;
 
         Ok(())
     }

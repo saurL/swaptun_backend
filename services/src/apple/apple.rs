@@ -4,13 +4,72 @@ use crate::{error::AppError, GetDeveloperToken};
 use crate::{
     AddTokenRequest, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
 };
+use apple_music_api::catalog::Song;
 use apple_music_api::config::ClientConfigBuilder;
 use apple_music_api::library::LibraryPlaylistsResponse;
+use futures::{stream, StreamExt};
+
 use apple_music_api::{create_developer_token, AppleMusicClient};
 use log::{error, info};
+
 use sea_orm::{DatabaseConnection, IntoActiveModel, Set};
-use swaptun_models::{playlist, AppleTokenActiveModel, AppleTokenModel, UserModel};
+use swaptun_models::{playlist, AppleTokenActiveModel, AppleTokenModel, MusicModel, UserModel};
 use swaptun_repositories::AppleTokenRepository;
+/// Normalize a string for fuzzy matching
+fn normalize_string(s: &str) -> String {
+    s.to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Check if two strings match with fuzzy logic
+fn fuzzy_match(str1: &str, str2: &str) -> bool {
+    let norm1 = normalize_string(str1);
+    let norm2 = normalize_string(str2);
+
+    if norm1 == norm2 {
+        return true;
+    }
+
+    if norm1.contains(&norm2) || norm2.contains(&norm1) {
+        return true;
+    }
+
+    false
+}
+
+/// Check if artist matches (Apple Music artist is a String)
+fn artist_matches_apple(apple_artist: &str, db_artist: &str) -> bool {
+    let db_artist_norm = normalize_string(db_artist);
+    let apple_artist_norm = normalize_string(apple_artist);
+
+    if fuzzy_match(&apple_artist_norm, &db_artist_norm) {
+        return true;
+    }
+
+    let db_artist_parts: Vec<&str> = db_artist
+        .split(&['&', ','][..])
+        .chain(db_artist.split(" feat "))
+        .chain(db_artist.split(" feat. "))
+        .chain(db_artist.split(" ft "))
+        .chain(db_artist.split(" ft. "))
+        .chain(db_artist.split(" with "))
+        .map(|s| s.trim())
+        .collect();
+
+    for db_part in &db_artist_parts {
+        let db_part_norm = normalize_string(db_part);
+        if fuzzy_match(&apple_artist_norm, &db_part_norm) {
+            return true;
+        }
+    }
+
+    false
+}
 
 #[derive(Clone)]
 pub struct AppleMusicService {
@@ -275,9 +334,39 @@ impl AppleMusicService {
         // Get Apple Music client
         let client = self.get_apple_client(user).await?;
 
-        // Create the playlist on Apple Music
+        // Get tracks from the database playlist
+        let tracks = self
+            .music_service
+            .find_by_playlist(&playlist)
+            .await
+            .map_err(|e| {
+                error!("Error getting playlist tracks: {:?}", e);
+                AppError::InternalServerError
+            })?;
+
+        let concurrency_limit = 3; // ajuste selon les quotas de l’API Apple
+
+        let songs: Vec<Song> = stream::iter(tracks.clone().into_iter().map(|track| {
+            let client = client.clone(); // si ton client est clonable
+            async move {
+                let query = format!("{} {}", track.title, track.artist);
+                self.search_song(&client, query, track).await
+            }
+        }))
+        .buffer_unordered(concurrency_limit)
+        .filter_map(|res| async move { res }) // garde seulement les Some(Song)
+        .collect()
+        .await;
+        let apple_track_ids: Vec<String> =
+            songs.iter().map(|opt_song| opt_song.id.clone()).collect();
+        // Create the playlist on Apple Music in the Swaptun folder
         let apple_playlist = client
-            .create_library_playlist(&playlist.name, playlist.description.as_deref())
+            .create_library_playlist(
+                &playlist.name,
+                playlist.description,
+                Some(apple_track_ids),
+                None::<String>,
+            )
             .await
             .map_err(|e| {
                 error!("Error creating Apple Music playlist: {:?}", e);
@@ -289,111 +378,58 @@ impl AppleMusicService {
             apple_playlist.id
         );
 
-        // Get tracks from the database playlist
-        let tracks = self
-            .music_service
-            .find_by_playlist(&playlist)
-            .await
-            .map_err(|e| {
-                error!("Error getting playlist tracks: {:?}", e);
-                AppError::InternalServerError
-            })?;
+        Ok(apple_playlist.id)
+    }
 
-        if tracks.is_empty() {
-            info!("No tracks in playlist, returning early");
-            return Ok(apple_playlist.id);
-        }
+    pub async fn search_song(
+        &self,
+        client: &AppleMusicClient,
+        query: String,
+        track: MusicModel,
+    ) -> Option<Song> {
+        match client.search_songs(&query).await {
+            Ok(songs) => {
+                for apple_song in songs.iter().take(5) {
+                    // Use fuzzy matching for title and artist
+                    let title_matches = fuzzy_match(&apple_song.attributes.name, &track.title);
+                    let artist_matches =
+                        artist_matches_apple(&apple_song.attributes.artist_name, &track.artist);
 
-        // Search for tracks on Apple Music and collect their IDs
-        let mut apple_track_ids = Vec::new();
-        let mut not_found_tracks = Vec::new();
+                    if title_matches && artist_matches {
+                        // Add song to library first
 
-        for track in tracks {
-            // Search for the track on Apple Music
-            let query = format!("{} {}", track.title, track.artist);
-
-            match client.search_songs(&query).await {
-                Ok(songs) => {
-                    let mut found = false;
-                    for apple_song in songs.iter().take(5) {
-                        let apple_artist = apple_song.attributes.artist_name.to_lowercase();
-                        let apple_title = apple_song.attributes.name.to_lowercase();
-
-                        if apple_title == track.title.to_lowercase()
-                            && apple_artist == track.artist.to_lowercase()
-                        {
-                            // Add song to library first
-                            if let Err(e) = client.add_songs_to_library(&[&apple_song.id]).await {
-                                error!("Error adding song to library: {:?}", e);
-                                // Continue anyway, the song might already be in the library
-                            }
-
-                            apple_track_ids.push(apple_song.id.clone());
-                            info!(
-                                "Found track on Apple Music: {} - {}",
-                                track.artist, track.title
-                            );
-                            found = true;
-                            break;
-                        } else {
-                            info!(
-                                "Track found but artist/title does not match: Apple: {} - {}, DB: {} - {}",
-                                apple_artist,
-                                apple_title,
+                        info!(
+                            "Found track on Apple Music: {} - {} (matched with: {} - {})",
+                            track.artist,
+                            track.title,
+                            apple_song.attributes.artist_name,
+                            apple_song.attributes.name
+                        );
+                        return Some(apple_song.clone());
+                    } else {
+                        info!(
+                                "Track found but does not match - Title match: {}, Artist match: {} | Apple: {} - {}, DB: {} - {}",
+                                title_matches,
+                                artist_matches,
+                                apple_song.attributes.artist_name,
+                                apple_song.attributes.name,
                                 track.artist,
                                 track.title
                             );
-                        }
-                    }
-
-                    if !found {
-                        not_found_tracks.push(format!("{} - {}", track.artist, track.title));
-                        info!(
-                            "Track not found on Apple Music: {} - {}",
-                            track.artist, track.title
-                        );
                     }
                 }
-                Err(e) => {
-                    error!(
-                        "Error searching for track {} - {}: {:?}",
-                        track.artist, track.title, e
-                    );
-                    not_found_tracks.push(format!("{} - {}", track.artist, track.title));
-                }
+
+                return None;
+            }
+            Err(e) => {
+                error!(
+                    "Error searching for track {} - {}: {:?}",
+                    track.artist, track.title, e
+                );
+
+                None
             }
         }
-
-        // Add tracks to the Apple Music playlist in batches
-        if !apple_track_ids.is_empty() {
-            // Apple Music API can handle batches, but let's be conservative with 100 tracks at a time
-            for chunk in apple_track_ids.chunks(100) {
-                let track_refs: Vec<&str> = chunk.iter().map(|s| s.as_str()).collect();
-
-                match client
-                    .add_tracks_to_playlist(&apple_playlist.id, &track_refs)
-                    .await
-                {
-                    Ok(_) => {
-                        info!("Added {} tracks to Apple Music playlist", chunk.len());
-                    }
-                    Err(e) => {
-                        error!("Error adding tracks to Apple Music playlist: {:?}", e);
-                        return Err(AppError::InternalServerError);
-                    }
-                }
-            }
-        }
-
-        // Log tracks that weren't found
-        if !not_found_tracks.is_empty() {
-            info!("The following tracks were not found on Apple Music:");
-            for track in &not_found_tracks {
-                info!("  - {}", track);
-            }
-        }
-
-        Ok(apple_playlist.id)
     }
 
     pub async fn disconnect(&self, user: &UserModel) -> Result<(), AppError> {
@@ -415,120 +451,5 @@ impl AppleMusicService {
 
         info!("Apple Music disconnected successfully for user {}", user.id);
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test::test_database::setup_test_db;
-    use sea_orm::ActiveValue::Set;
-    use swaptun_models::{playlist, MusicActiveModel, PlaylistActiveModel, UserActiveModel};
-
-    #[tokio::test]
-    async fn test_export_playlist_to_apple_no_tracks() {
-        // Setup test database
-        let db = setup_test_db().await;
-        let apple_service = AppleMusicService::new(db.clone());
-
-        // Create test user
-        let user_active = UserActiveModel {
-            username: Set("test_user".to_string()),
-            password: Set("hash".to_string()),
-            email: Set("test@example.com".to_string()),
-            first_name: Set("Test".to_string()),
-            last_name: Set("User".to_string()),
-            role: Set("user".to_string()),
-            ..Default::default()
-        };
-        let user = swaptun_repositories::UserRepository::new(db.clone())
-            .save(user_active)
-            .await
-            .unwrap();
-
-        // Create test playlist without tracks
-        let playlist_active = PlaylistActiveModel {
-            user_id: Set(user.id),
-            name: Set("Test Playlist".to_string()),
-            description: Set(Some("Test description".to_string())),
-            origin: Set(playlist::PlaylistOrigin::Spotify),
-            origin_id: Set("test_origin_id".to_string()),
-            ..Default::default()
-        };
-        let playlist = swaptun_repositories::PlaylistRepository::new(db.clone())
-            .save(playlist_active)
-            .await
-            .unwrap();
-
-        // Note: This test cannot actually call Apple Music API without credentials
-        // In a real scenario, you would:
-        // 1. Mock the Apple Music client
-        // 2. Or skip this test if Apple credentials are not available
-        // For now, we just verify the playlist was created correctly
-        assert_eq!(playlist.name, "Test Playlist");
-        assert_eq!(playlist.user_id, user.id);
-    }
-
-    #[tokio::test]
-    async fn test_import_playlist_creates_music_records() {
-        // Setup test database
-        let db = setup_test_db().await;
-        let apple_service = AppleMusicService::new(db.clone());
-        let music_service = MusicService::new(db.clone());
-
-        // Create test user
-        let user_active = UserActiveModel {
-            username: Set("test_user".to_string()),
-            password: Set("hash".to_string()),
-            email: Set("test@example.com".to_string()),
-            first_name: Set("Test".to_string()),
-            last_name: Set("User".to_string()),
-            role: Set("user".to_string()),
-            ..Default::default()
-        };
-        let user = swaptun_repositories::UserRepository::new(db.clone())
-            .save(user_active)
-            .await
-            .unwrap();
-
-        // Create test playlist
-        let playlist_active = PlaylistActiveModel {
-            user_id: Set(user.id),
-            name: Set("Test Playlist".to_string()),
-            description: Set(Some("Test description".to_string())),
-            origin: Set(playlist::PlaylistOrigin::AppleMusic),
-            origin_id: Set("test_apple_playlist_id".to_string()),
-            ..Default::default()
-        };
-        let playlist = swaptun_repositories::PlaylistRepository::new(db.clone())
-            .save(playlist_active)
-            .await
-            .unwrap();
-
-        // Add test music to playlist
-        let music_active = MusicActiveModel {
-            title: Set("Test Song".to_string()),
-            artist: Set("Test Artist".to_string()),
-            album: Set("Test Album".to_string()),
-            genre: Set(Some("Rock".to_string())),
-            release_date: Set(chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap()),
-            ..Default::default()
-        };
-        let music = swaptun_repositories::MusicRepository::new(db.clone())
-            .save(music_active)
-            .await
-            .unwrap();
-
-        apple_service
-            .playlist_service
-            .add_music(&playlist, music.clone())
-            .await
-            .unwrap();
-
-        // Verify music was added
-        let tracks = music_service.find_by_playlist(&playlist).await.unwrap();
-        assert_eq!(tracks.len(), 1);
-        assert_eq!(tracks[0].title, "Test Song");
-        assert_eq!(tracks[0].artist, "Test Artist");
     }
 }

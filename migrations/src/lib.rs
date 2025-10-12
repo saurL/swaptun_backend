@@ -17,6 +17,8 @@ mod m2025_08_16_create_friendships_table;
 mod m2025_08_16_create_shared_playlist_table;
 mod m2025_09_10_create_apple_token_table;
 mod m2025_10_05_add_shared_by_to_shared_playlist;
+#[path = "m2025_10_05_remove_unique_constraint_friendships.rs"]
+mod m2025_10_05_remove_unique_constraint_friendships;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -40,6 +42,7 @@ impl MigratorTrait for Migrator {
             Box::new(m2025_04_29_add_playlist_origin_id::Migration),
             Box::new(m2025_04_29_create_spotify_code_table::Migration),
             Box::new(m2025_10_05_add_shared_by_to_shared_playlist::Migration),
+            Box::new(m2025_10_05_remove_unique_constraint_friendships::Migration),
         ]
     }
 }

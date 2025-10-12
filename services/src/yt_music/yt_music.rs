@@ -13,10 +13,12 @@ use ytmapi_rs::{
     YtMusic,
 };
 
+use crate::AddTokenRequest;
 use crate::{
     error::AppError, music::dto::CreateMusicRequest, music::music_service::MusicService,
     playlist::playlist_service::PlaylistService, CreatePlaylistRequest, YoutubeUrlResponse,
 };
+use apple_music_api::catalog::Artist;
 use log::{error, info};
 use oauth2::{
     basic::{BasicClient, BasicErrorResponseType, BasicTokenType},
@@ -26,11 +28,30 @@ use oauth2::{
     StandardTokenIntrospectionResponse, StandardTokenResponse, TokenResponse, TokenUrl,
 };
 use std::env::var;
-
-use crate::AddTokenRequest;
 static VERIFIER_STORE: Lazy<Mutex<HashMap<i32, PkceCodeVerifier>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 use ytmapi_rs::query::playlist::GetWatchPlaylistQueryID;
+
+/// Normalize a string for simple comparison (lowercase + alphanumeric only)
+fn normalize_string(s: &str) -> String {
+    s.to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Simple permissive match: check if one string contains the other
+fn simple_match(str1: &str, str2: &str) -> bool {
+    let norm1 = normalize_string(str1);
+    let norm2 = normalize_string(str2);
+
+    // Check if one contains the other
+    norm1.contains(&norm2) || norm2.contains(&norm1)
+}
+
 #[derive(Clone)]
 pub struct YoutubeMusicService {
     youtube_token_repository: YoutubeTokenRepository,
@@ -506,13 +527,30 @@ impl YoutubeMusicService {
         for track in tracks {
             match client.search_songs(track.title.clone()).await {
                 Ok(youtube_tracks) => {
+                    let mut found = false;
                     for youtube_track in youtube_tracks {
-                        if youtube_track.title == track.title
-                            && youtube_track.artist == track.artist
-                        {
+                        // Simple permissive matching: check if DB name is included in YouTube name or vice versa
+                        let title_matches = simple_match(&youtube_track.title, &track.title);
+                        let artist_matches = simple_match(&youtube_track.artist, &track.artist);
+
+                        if title_matches && artist_matches {
+                            info!(
+                                "Found track on YouTube Music: {} - {} (matched with: {} - {})",
+                                track.artist,
+                                track.title,
+                                youtube_track.artist,
+                                youtube_track.title
+                            );
                             youtube_tracks_id.push(youtube_track);
+                            found = true;
                             break;
                         }
+                    }
+                    if !found {
+                        info!(
+                            "Track not found on YouTube Music: {} - {}",
+                            track.artist, track.title
+                        );
                     }
                 }
                 Err(e) => {

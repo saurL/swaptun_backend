@@ -89,15 +89,17 @@ impl PlaylistService {
             .playlist_repository
             .find_shared_playlist_with_details(user)
             .await?;
-        let mut shared_playlists = Vec::new();
-        details.into_iter().map(|(shared, playlist, shared_by)| {
-            shared_playlists.push(SharedPlaylist {
+
+        let shared_playlists = details
+            .into_iter()
+            .map(|(shared, playlist, shared_by)| SharedPlaylist {
                 id: shared.id,
                 playlist,
                 shared_by: shared_by.into(),
                 shared_at: shared.created_on.into(),
-            });
-        });
+            })
+            .collect();
+
         Ok(SharedPlaylistsResponse { shared_playlists })
     }
 

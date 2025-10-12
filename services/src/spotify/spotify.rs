@@ -24,6 +24,78 @@ use swaptun_repositories::{
 use chrono::{NaiveDate, Utc};
 use rspotify::{scopes, AuthCodeSpotify, Credentials, OAuth, Token};
 
+/// Normalize a string for fuzzy matching
+fn normalize_string(s: &str) -> String {
+    s.to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Check if two strings match with fuzzy logic
+/// Returns true if:
+/// - They are exact matches
+/// - One contains the other
+/// - They match after normalization
+fn fuzzy_match(str1: &str, str2: &str) -> bool {
+    let norm1 = normalize_string(str1);
+    let norm2 = normalize_string(str2);
+
+    // Exact match after normalization
+    if norm1 == norm2 {
+        return true;
+    }
+
+    // One contains the other
+    if norm1.contains(&norm2) || norm2.contains(&norm1) {
+        return true;
+    }
+
+    false
+}
+
+/// Check if artists match with fuzzy logic
+/// For "SDM & Werenoi", should match "SDM" or "Werenoi" individually
+fn artists_match(spotify_artists: &[rspotify::model::SimplifiedArtist], db_artist: &str) -> bool {
+    let db_artist_norm = normalize_string(db_artist);
+
+    // Check if any Spotify artist matches
+    for spotify_artist in spotify_artists {
+        let spotify_artist_norm = normalize_string(&spotify_artist.name);
+
+        if fuzzy_match(&spotify_artist_norm, &db_artist_norm) {
+            return true;
+        }
+    }
+
+    // Check if db_artist contains multiple artists (split by &, feat, ft, with, etc.)
+    let db_artist_parts: Vec<&str> = db_artist
+        .split(&['&', ','][..])
+        .chain(db_artist.split(" feat "))
+        .chain(db_artist.split(" feat. "))
+        .chain(db_artist.split(" ft "))
+        .chain(db_artist.split(" ft. "))
+        .chain(db_artist.split(" with "))
+        .map(|s| s.trim())
+        .collect();
+
+    // Check if any part matches any Spotify artist
+    for db_part in &db_artist_parts {
+        let db_part_norm = normalize_string(db_part);
+        for spotify_artist in spotify_artists {
+            let spotify_artist_norm = normalize_string(&spotify_artist.name);
+            if fuzzy_match(&spotify_artist_norm, &db_part_norm) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 #[derive(Clone)]
 pub struct SpotifyService {
     spotify_code_repository: SpotifyCodeRepository,
@@ -493,16 +565,25 @@ impl SpotifyService {
                 Ok(SearchResult::Tracks(track_result)) => {
                     for spotify_track in track_result.items.iter().take(5) {
                         if let Some(track_id) = &spotify_track.id {
-                            if spotify_track.name.to_lowercase() == track.title.to_lowercase()
-                                && spotify_track.artists.first().map(|a| a.name.to_lowercase())
-                                    == Some(track.artist.to_lowercase())
-                            {
+                            // Use fuzzy matching for both title and artist
+                            let title_matches = fuzzy_match(&spotify_track.name, &track.title);
+                            let artist_matches = artists_match(&spotify_track.artists, &track.artist);
+
+                            if title_matches && artist_matches {
                                 spotify_track_ids.push(track_id.clone());
-                                info!("Found track on Spotify: {} - {}", track.artist, track.title);
+                                info!(
+                                    "Found track on Spotify: {} - {} (matched with: {} - {})",
+                                    track.artist,
+                                    track.title,
+                                    spotify_track.artists.first().map_or("", |a| a.name.as_str()),
+                                    spotify_track.name
+                                );
                                 break;
                             } else {
                                 info!(
-                                    "Track found but artist/title does not match: Spotify: {} - {}, DB: {} - {}",
+                                    "Track found but does not match - Title match: {}, Artist match: {} | Spotify: {} - {}, DB: {} - {}",
+                                    title_matches,
+                                    artist_matches,
                                     spotify_track.artists.first().map_or("", |a| a.name.as_str()),
                                     spotify_track.name,
                                     track.artist,

@@ -116,6 +116,7 @@ impl UserRepository {
                 &search_fields,
                 &include_deleted,
                 &false,
+                &false, // exclude_self is always false for friends search (user can't be their own friend)
             )
             .await
             .limit(limit.unwrap_or(u64::MAX))
@@ -134,6 +135,7 @@ impl UserRepository {
         offset: Option<u64>,
         friend_priority: bool,
         exclude_friends: bool,
+        exclude_self: bool,
     ) -> Result<Vec<UserModel>, DbErr> {
         let query = self
             .build_search_user_query(
@@ -143,6 +145,7 @@ impl UserRepository {
                 &search_fields,
                 &include_deleted,
                 &exclude_friends,
+                &exclude_self,
             )
             .await
             .limit(limit.unwrap_or(u64::MAX))
@@ -187,12 +190,32 @@ impl UserRepository {
     }
 
     async fn get_friend_ids(&self, user_id: i32) -> Result<Vec<i32>, DbErr> {
-        let friendships = FriendshipEntity::find()
+        // Get all friendships where user_id added someone
+        let friendships_initiated = FriendshipEntity::find()
             .filter(FriendshipColumn::UserId.eq(user_id))
             .all(&*self.db)
             .await?;
 
-        Ok(friendships.into_iter().map(|f| f.friend_id).collect())
+        let mut mutual_friend_ids = Vec::new();
+
+        // For each friendship, check if the reverse relationship exists (mutual)
+        for friendship in friendships_initiated {
+            let reverse_exists = FriendshipEntity::find()
+                .filter(
+                    FriendshipColumn::UserId
+                        .eq(friendship.friend_id)
+                        .and(FriendshipColumn::FriendId.eq(user_id)),
+                )
+                .one(&*self.db)
+                .await?;
+
+            // Only include if the friendship is mutual (both added each other)
+            if reverse_exists.is_some() {
+                mutual_friend_ids.push(friendship.friend_id);
+            }
+        }
+
+        Ok(mutual_friend_ids)
     }
 
     async fn build_search_user_query(
@@ -203,6 +226,7 @@ impl UserRepository {
         search_field: &Option<UserColumn>,
         include_deleted: &bool,
         exclude_friends: &bool,
+        exclude_self: &bool,
     ) -> Select<UserEntity> {
         let mut query = base_query;
 
@@ -228,6 +252,9 @@ impl UserRepository {
         }
         if *exclude_friends {
             query = query.filter(UserColumn::Id.is_not_in(self.get_friend_ids(user_id).await));
+        }
+        if *exclude_self {
+            query = query.filter(UserColumn::Id.ne(user_id));
         }
 
         query

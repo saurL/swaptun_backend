@@ -87,7 +87,7 @@ async fn test_get_shared_playlists() {
 
     // Share the playlist with user2
     playlist_service
-        .share_playlist(&user2, &playlist)
+        .share_playlist(&user2, &playlist, &user1)
         .await
         .unwrap();
 
@@ -167,7 +167,7 @@ async fn test_user_and_shared_playlists_separation() {
 
     // Share the playlist with user1
     playlist_service
-        .share_playlist(&user1, &shared_playlist)
+        .share_playlist(&user1, &shared_playlist, &user2)
         .await
         .unwrap();
 
