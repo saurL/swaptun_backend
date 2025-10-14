@@ -16,6 +16,7 @@ async fn test_get_playlists_by_origin() {
     create_test_playlists(&playlist_service, user.id).await;
     let get_playlists_params = GetPlaylistsParams {
         origin: None, // No specific origin, will fetch all
+        include_musics: false,
     };
     // Test getting all playlists
     let all_playlists = playlist_service
@@ -27,6 +28,7 @@ async fn test_get_playlists_by_origin() {
     // Test getting Spotify playlists
     let spotify_params = GetPlaylistsParams {
         origin: Some(PlaylistOrigin::Spotify),
+        include_musics: false,
     };
     let spotify_playlists = playlist_service
         .get_user_playlist(user.clone(), spotify_params)
@@ -41,6 +43,7 @@ async fn test_get_playlists_by_origin() {
     // Test getting Deezer playlists
     let deezer_params = GetPlaylistsParams {
         origin: Some(PlaylistOrigin::Deezer),
+        include_musics: false,
     };
     let deezer_playlists = playlist_service
         .get_user_playlist(user.clone(), deezer_params)
@@ -103,7 +106,7 @@ async fn test_get_shared_playlists() {
 
     // Verify user1's own playlists are separate
     let user1_playlists = playlist_service
-        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None })
+        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None, include_musics: false })
         .await
         .unwrap();
 
@@ -173,7 +176,7 @@ async fn test_user_and_shared_playlists_separation() {
 
     // Verify user1 gets their own playlists and shared playlists separately
     let user_playlists = playlist_service
-        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None })
+        .get_user_playlist(user1.clone(), GetPlaylistsParams { origin: None, include_musics: false })
         .await
         .unwrap();
 

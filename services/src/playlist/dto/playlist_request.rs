@@ -26,11 +26,31 @@ pub struct DeletePlaylistRequest {
 #[derive(Deserialize, Serialize, Validate)]
 pub struct GetPlaylistsParams {
     pub origin: Option<PlaylistOrigin>,
+    #[serde(default)]
+    pub include_musics: bool,
 }
 
 #[derive(Deserialize, Serialize, Validate, Clone)]
 pub struct GetPlaylistResponse {
     pub vec: Vec<PlaylistModel>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct PlaylistWithMusics {
+    #[serde(flatten)]
+    pub playlist: PlaylistModel,
+    pub musics: Vec<swaptun_models::MusicModel>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct GetPlaylistsWithMusicsResponse {
+    pub playlists: Vec<PlaylistWithMusics>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct GetPlaylistMusicsResponse {
+    pub playlist_id: i32,
+    pub musics: Vec<swaptun_models::MusicModel>,
 }
 
 #[derive(Deserialize, Serialize, Validate, Debug)]
@@ -122,5 +142,47 @@ mod tests {
             assert_eq!(deserialized.platform, platform);
             assert!(deserialized.playlist_id.contains("test_id"));
         }
+    }
+
+    #[test]
+    fn test_get_playlists_params_default_include_musics() {
+        let json = r#"{"origin":null}"#;
+        let params: GetPlaylistsParams = serde_json::from_str(json).unwrap();
+
+        assert_eq!(params.include_musics, false);
+        assert_eq!(params.origin, None);
+    }
+
+    #[test]
+    fn test_get_playlists_params_with_include_musics() {
+        let json = r#"{"origin":"Spotify","include_musics":true}"#;
+        let params: GetPlaylistsParams = serde_json::from_str(json).unwrap();
+
+        assert_eq!(params.include_musics, true);
+        assert_eq!(params.origin, Some(PlaylistOrigin::Spotify));
+    }
+
+    #[test]
+    fn test_get_playlist_musics_response_serialization() {
+        use swaptun_models::MusicModel;
+        use chrono::NaiveDate;
+
+        let music = MusicModel {
+            title: "Test Song".to_string(),
+            artist: "Test Artist".to_string(),
+            album: "Test Album".to_string(),
+            release_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
+            genre: Some("Rock".to_string()),
+        };
+
+        let response = GetPlaylistMusicsResponse {
+            playlist_id: 42,
+            musics: vec![music],
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("Test Song"));
+        assert!(json.contains("Test Artist"));
+        assert!(json.contains("\"playlist_id\":42"));
     }
 }

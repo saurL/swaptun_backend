@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use super::{
-    CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistResponse, GetPlaylistsParams,
+    CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistMusicsResponse,
+    GetPlaylistResponse, GetPlaylistsParams, GetPlaylistsWithMusicsResponse, PlaylistWithMusics,
     UpdatePlaylistRequest,
 };
 use crate::{error::AppError, SharedPlaylist, SharedPlaylistsResponse, UserInfo};
@@ -12,19 +13,21 @@ use swaptun_models::{
     music_playlist, playlist::PlaylistOrigin, MusicModel, PlaylistActiveModel, PlaylistModel,
     UserModel,
 };
-use swaptun_repositories::{MusicPlaylistRepository, PlaylistRepository};
+use swaptun_repositories::{MusicPlaylistRepository, MusicRepository, PlaylistRepository};
 
 #[derive(Clone)]
 pub struct PlaylistService {
     pub playlist_repository: PlaylistRepository,
     pub music_playlist_repository: MusicPlaylistRepository,
+    pub music_repository: MusicRepository,
 }
 
 impl PlaylistService {
     pub fn new(db: Arc<DatabaseConnection>) -> Self {
         Self {
             playlist_repository: PlaylistRepository::new(db.clone()),
-            music_playlist_repository: MusicPlaylistRepository::new(db),
+            music_playlist_repository: MusicPlaylistRepository::new(db.clone()),
+            music_repository: MusicRepository::new(db),
         }
     }
 
@@ -63,6 +66,44 @@ impl PlaylistService {
                 Err(e)
             }
         }
+    }
+
+    pub async fn get_user_playlist_with_musics(
+        &self,
+        user: UserModel,
+        params: GetPlaylistsParams,
+    ) -> Result<GetPlaylistsWithMusicsResponse, AppError> {
+        let playlists = self
+            .playlist_repository
+            .find_by_user(&user, params.origin)
+            .await?;
+
+        let mut playlists_with_musics = Vec::new();
+
+        for playlist in playlists {
+            let musics = self.music_repository.find_by_playlist(&playlist).await?;
+            playlists_with_musics.push(PlaylistWithMusics {
+                playlist,
+                musics,
+            });
+        }
+
+        Ok(GetPlaylistsWithMusicsResponse {
+            playlists: playlists_with_musics,
+        })
+    }
+
+    pub async fn get_playlist_musics(
+        &self,
+        playlist_id: i32,
+    ) -> Result<GetPlaylistMusicsResponse, AppError> {
+        let playlist = self.get_playlist(playlist_id).await?;
+        let musics = self.music_repository.find_by_playlist(&playlist).await?;
+
+        Ok(GetPlaylistMusicsResponse {
+            playlist_id,
+            musics,
+        })
     }
 
     pub async fn get_shared_playlists(

@@ -26,6 +26,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .put(update_playlist)
             .delete(delete_playlist),
     )
+    .service(web::resource("/{id}/musics").get(get_playlist_musics))
     .service(
         web::resource("/{id}/music")
             .post(add_music_to_playlist)
@@ -46,11 +47,19 @@ async fn get_user_playlists(
     let user = user_service.get_user_from_claims(claims).await?;
 
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
-    let playlists = playlist_service
-        .get_user_playlist(user, query.into_inner())
-        .await?;
+    let params = query.into_inner();
 
-    Ok(HttpResponse::Ok().json(playlists))
+    if params.include_musics {
+        let playlists_with_musics = playlist_service
+            .get_user_playlist_with_musics(user, params)
+            .await?;
+        Ok(HttpResponse::Ok().json(playlists_with_musics))
+    } else {
+        let playlists = playlist_service
+            .get_user_playlist(user, params)
+            .await?;
+        Ok(HttpResponse::Ok().json(playlists))
+    }
 }
 
 async fn get_shared_playlists(
@@ -98,6 +107,17 @@ async fn get_playlist(
     let playlist = playlist_service.get_playlist(playlist_id).await?;
 
     Ok(HttpResponse::Ok().json(playlist))
+}
+
+async fn get_playlist_musics(
+    db: web::Data<DbConn>,
+    path: web::Path<i32>,
+) -> Result<HttpResponse, AppError> {
+    let playlist_id = path.into_inner();
+    let playlist_service = PlaylistService::new(db.get_ref().clone().into());
+    let response = playlist_service.get_playlist_musics(playlist_id).await?;
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 async fn update_playlist(
