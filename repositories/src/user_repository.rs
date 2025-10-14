@@ -118,7 +118,7 @@ impl UserRepository {
                 &false,
                 &false, // exclude_self is always false for friends search (user can't be their own friend)
             )
-            .await
+            .await?
             .limit(limit.unwrap_or(u64::MAX))
             .offset(offset.unwrap_or(0));
 
@@ -147,7 +147,7 @@ impl UserRepository {
                 &exclude_friends,
                 &exclude_self,
             )
-            .await
+            .await?
             .limit(limit.unwrap_or(u64::MAX))
             .offset(offset.unwrap_or(0));
 
@@ -227,7 +227,7 @@ impl UserRepository {
         include_deleted: &bool,
         exclude_friends: &bool,
         exclude_self: &bool,
-    ) -> Select<UserEntity> {
+    ) -> Result<Select<UserEntity>, DbErr> {
         let mut query = base_query;
 
         if !include_deleted {
@@ -240,7 +240,7 @@ impl UserRepository {
                 UserColumn::FirstName => "first_name",
                 UserColumn::LastName => "last_name",
                 UserColumn::Email => "email",
-                _ => return query, // ignore invalid field
+                _ => return Ok(query), // ignore invalid field
             };
             let threshold = self.calculate_threshold(&search_term);
             let condition = Expr::cust(format!(
@@ -251,12 +251,13 @@ impl UserRepository {
             query = query.filter(condition).order_by(order_by, Order::Desc);
         }
         if *exclude_friends {
-            query = query.filter(UserColumn::Id.is_not_in(self.get_friend_ids(user_id).await));
+            let ids = self.get_friend_ids(user_id.clone()).await?;
+            query = query.filter(UserColumn::Id.is_not_in(ids));
         }
         if *exclude_self {
             query = query.filter(UserColumn::Id.ne(user_id));
         }
 
-        query
+        Ok(query)
     }
 }

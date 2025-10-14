@@ -9,8 +9,8 @@ use swaptun_services::error::AppError;
 use swaptun_services::{
     AppleMusicService, CreateMusicRequest, CreatePlaylistRequest, DeezerService,
     DeletePlaylistRequest, GetPlaylistsParams, NotificationService, PlaylistOrigin,
-    PlaylistService, SendPlaylistRequest, SharePlaylistRequest, SpotifyService,
-    UpdatePlaylistRequest, UserService, YoutubeMusicService,
+    PlaylistService, SendPlaylistRequest, SendPlaylistResponse, SharePlaylistRequest,
+    SpotifyService, UpdatePlaylistRequest, UserService, YoutubeMusicService,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
@@ -200,7 +200,7 @@ async fn send_playlist_to_origin(
     req: web::Json<SendPlaylistRequest>,
     claims: web::ReqData<Claims>,
     path: web::Path<i32>,
-) -> Result<String, AppError> {
+) -> Result<HttpResponse, AppError> {
     let db: Arc<DatabaseConnection> = db.get_ref().clone().into();
     let user_service = UserService::new(db.clone());
     let user = user_service
@@ -208,44 +208,39 @@ async fn send_playlist_to_origin(
         .await?;
     let req = req.into_inner();
     let playlist_id = path.into_inner();
-    let destination = req.destination;
+    let destination = req.destination.clone();
+
     // Send playlist based on its destination
-    match destination {
+    let platform_playlist_id = match destination {
         PlaylistOrigin::Spotify => {
             let spotify_service = SpotifyService::new(db.clone());
-
             spotify_service
                 .create_spotify_playlist_from_db(playlist_id, &user)
-                .await
+                .await?
         }
         PlaylistOrigin::YoutubeMusic => {
             let youtube_service = YoutubeMusicService::new(db.clone());
-
             youtube_service
                 .import_playlist_in_yt(&user, playlist_id)
-                .await
-                .map(|_| "Playlist sent to YouTube Music successfully".to_string())
-                .map_err(|e| {
-                    error!("Error sending playlist to YouTube Music: {:?}", e);
-                    e
-                })
+                .await?
         }
-        PlaylistOrigin::Deezer => Err(AppError::InternalServerError),
-
         PlaylistOrigin::AppleMusic => {
             let apple_service = AppleMusicService::new(db.clone());
-
             apple_service
                 .export_playlist_to_apple(playlist_id, &user)
-                .await
-                .map(|playlist_id| {
-                    format!(
-                        "Playlist sent to Apple Music successfully with ID: {}",
-                        playlist_id
-                    )
-                })
+                .await?
         }
-    }
+        PlaylistOrigin::Deezer => {
+            return Err(AppError::InternalServerError);
+        }
+    };
+
+    let response = SendPlaylistResponse {
+        platform: req.destination,
+        playlist_id: platform_playlist_id,
+    };
+
+    Ok(HttpResponse::Ok().json(response))
 }
 async fn share_playlist(
     db: web::Data<DbConn>,

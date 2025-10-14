@@ -37,6 +37,13 @@ pub struct GetPlaylistResponse {
 pub struct SendPlaylistRequest {
     pub destination: PlaylistOrigin,
 }
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct SendPlaylistResponse {
+    pub platform: PlaylistOrigin,
+    pub playlist_id: String,
+}
+
 #[derive(Deserialize, Serialize, Validate, Debug)]
 pub struct SharePlaylistRequest {
     pub user_id: i32,
@@ -66,6 +73,54 @@ impl From<UserModel> for UserInfo {
         UserInfo {
             id: user.id,
             username: user.username,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_send_playlist_response_serialization() {
+        let response = SendPlaylistResponse {
+            platform: PlaylistOrigin::Spotify,
+            playlist_id: "test_id_123".to_string(),
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("test_id_123"));
+        assert!(json.contains("Spotify"));
+    }
+
+    #[test]
+    fn test_send_playlist_response_deserialization() {
+        let json = r#"{"platform":"YoutubeMusic","playlist_id":"yt_playlist_456"}"#;
+        let response: SendPlaylistResponse = serde_json::from_str(json).unwrap();
+
+        assert_eq!(response.platform, PlaylistOrigin::YoutubeMusic);
+        assert_eq!(response.playlist_id, "yt_playlist_456");
+    }
+
+    #[test]
+    fn test_send_playlist_response_all_platforms() {
+        let platforms = vec![
+            PlaylistOrigin::Spotify,
+            PlaylistOrigin::AppleMusic,
+            PlaylistOrigin::YoutubeMusic,
+        ];
+
+        for platform in platforms {
+            let response = SendPlaylistResponse {
+                platform: platform.clone(),
+                playlist_id: format!("{:?}_test_id", platform),
+            };
+
+            let json = serde_json::to_string(&response).unwrap();
+            let deserialized: SendPlaylistResponse = serde_json::from_str(&json).unwrap();
+
+            assert_eq!(deserialized.platform, platform);
+            assert!(deserialized.playlist_id.contains("test_id"));
         }
     }
 }

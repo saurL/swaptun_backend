@@ -505,7 +505,7 @@ impl YoutubeMusicService {
         &self,
         user: &UserModel,
         playlist_id: i32,
-    ) -> Result<(), AppError> {
+    ) -> Result<String, AppError> {
         let client = match self.get_ytmusic_client(user).await {
             Ok(client) => client,
             Err(e) => {
@@ -519,7 +519,7 @@ impl YoutubeMusicService {
 
         if tracks.is_empty() {
             info!("No tracks in playlist, returning early");
-            return Ok(());
+            return Ok(String::new());
         }
 
         let mut youtube_tracks_id = Vec::new();
@@ -576,10 +576,13 @@ impl YoutubeMusicService {
             .map(|track| track.video_id)
             .collect();
         match client
-            .add_video_items_to_playlist(yt_playlist_id, video_ids)
+            .add_video_items_to_playlist(yt_playlist_id.clone(), video_ids)
             .await
         {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                info!("Successfully added tracks to YouTube playlist: {:?}", yt_playlist_id);
+                Ok(yt_playlist_id.get_raw().to_string())
+            },
             Err(e) => {
                 error!("Failed to add video items to playlist: {:?}", e);
                 Err(AppError::InternalServerError)
