@@ -30,20 +30,15 @@ pub struct GetPlaylistsParams {
     pub include_musics: bool,
 }
 
-#[derive(Deserialize, Serialize, Validate, Clone)]
-pub struct GetPlaylistResponse {
-    pub vec: Vec<PlaylistModel>,
-}
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct PlaylistWithMusics {
-    #[serde(flatten)]
     pub playlist: PlaylistModel,
-    pub musics: Vec<swaptun_models::MusicModel>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub musics: Option<Vec<swaptun_models::MusicModel>>,
 }
 
-#[derive(Deserialize, Serialize, Clone)]
-pub struct GetPlaylistsWithMusicsResponse {
+#[derive(Deserialize, Serialize, Validate, Clone)]
+pub struct GetPlaylistResponse {
     pub playlists: Vec<PlaylistWithMusics>,
 }
 
@@ -184,5 +179,95 @@ mod tests {
         assert!(json.contains("Test Song"));
         assert!(json.contains("Test Artist"));
         assert!(json.contains("\"playlist_id\":42"));
+    }
+
+    #[test]
+    fn test_playlist_with_musics_serialization_without_musics() {
+        use swaptun_models::PlaylistModel;
+        use chrono::{FixedOffset, Utc};
+
+        let playlist = PlaylistModel {
+            id: 1,
+            name: "Test Playlist".to_string(),
+            description: Some("Test Description".to_string()),
+            user_id: 1,
+            origin: PlaylistOrigin::Spotify,
+            origin_id: "test_id".to_string(),
+            created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+        };
+
+        let playlist_with_musics = PlaylistWithMusics {
+            playlist,
+            musics: None,
+        };
+
+        let json = serde_json::to_string(&playlist_with_musics).unwrap();
+        assert!(json.contains("Test Playlist"));
+        assert!(!json.contains("musics"));
+    }
+
+    #[test]
+    fn test_playlist_with_musics_serialization_with_musics() {
+        use swaptun_models::{MusicModel, PlaylistModel};
+        use chrono::{FixedOffset, NaiveDate, Utc};
+
+        let playlist = PlaylistModel {
+            id: 1,
+            name: "Test Playlist".to_string(),
+            description: Some("Test Description".to_string()),
+            user_id: 1,
+            origin: PlaylistOrigin::Spotify,
+            origin_id: "test_id".to_string(),
+            created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+        };
+
+        let music = MusicModel {
+            title: "Test Song".to_string(),
+            artist: "Test Artist".to_string(),
+            album: "Test Album".to_string(),
+            release_date: NaiveDate::from_ymd_opt(2024, 1, 15).unwrap(),
+            genre: Some("Rock".to_string()),
+        };
+
+        let playlist_with_musics = PlaylistWithMusics {
+            playlist,
+            musics: Some(vec![music]),
+        };
+
+        let json = serde_json::to_string(&playlist_with_musics).unwrap();
+        assert!(json.contains("Test Playlist"));
+        assert!(json.contains("musics"));
+        assert!(json.contains("Test Song"));
+        assert!(json.contains("Test Artist"));
+    }
+
+    #[test]
+    fn test_get_playlist_response_serialization() {
+        use swaptun_models::PlaylistModel;
+        use chrono::{FixedOffset, Utc};
+
+        let playlist = PlaylistModel {
+            id: 1,
+            name: "Test Playlist".to_string(),
+            description: Some("Test Description".to_string()),
+            user_id: 1,
+            origin: PlaylistOrigin::Spotify,
+            origin_id: "spotify_id".to_string(),
+            created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+        };
+
+        let response = GetPlaylistResponse {
+            playlists: vec![PlaylistWithMusics {
+                playlist,
+                musics: None,
+            }],
+        };
+
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("playlists"));
+        assert!(json.contains("Test Playlist"));
     }
 }

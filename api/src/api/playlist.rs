@@ -49,17 +49,8 @@ async fn get_user_playlists(
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
     let params = query.into_inner();
 
-    if params.include_musics {
-        let playlists_with_musics = playlist_service
-            .get_user_playlist_with_musics(user, params)
-            .await?;
-        Ok(HttpResponse::Ok().json(playlists_with_musics))
-    } else {
-        let playlists = playlist_service
-            .get_user_playlist(user, params)
-            .await?;
-        Ok(HttpResponse::Ok().json(playlists))
-    }
+    let playlists = playlist_service.get_user_playlist(user, params).await?;
+    Ok(HttpResponse::Ok().json(playlists))
 }
 
 async fn get_shared_playlists(

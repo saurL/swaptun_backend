@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::{
     CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistMusicsResponse,
-    GetPlaylistResponse, GetPlaylistsParams, GetPlaylistsWithMusicsResponse, PlaylistWithMusics,
+    GetPlaylistResponse, GetPlaylistsParams, PlaylistWithMusics,
     UpdatePlaylistRequest,
 };
 use crate::{error::AppError, SharedPlaylist, SharedPlaylistsResponse, UserInfo};
@@ -51,47 +51,37 @@ impl PlaylistService {
         &self,
         user: UserModel,
         params: GetPlaylistsParams,
-    ) -> Result<GetPlaylistResponse, DbErr> {
-        match self
-            .playlist_repository
-            .find_by_user(&user, params.origin)
-            .await
-        {
-            Ok(playlists) => {
-                let response = GetPlaylistResponse { vec: playlists };
-                Ok(response)
-            }
-            Err(e) => {
-                error!("Error fetching user playlists: {:?}", e);
-                Err(e)
-            }
-        }
-    }
-
-    pub async fn get_user_playlist_with_musics(
-        &self,
-        user: UserModel,
-        params: GetPlaylistsParams,
-    ) -> Result<GetPlaylistsWithMusicsResponse, AppError> {
+    ) -> Result<GetPlaylistResponse, AppError> {
         let playlists = self
             .playlist_repository
             .find_by_user(&user, params.origin)
             .await?;
 
-        let mut playlists_with_musics = Vec::new();
+        let playlists_with_musics = if params.include_musics {
+            let mut result = Vec::new();
+            for playlist in playlists {
+                let musics = self.music_repository.find_by_playlist(&playlist).await?;
+                result.push(PlaylistWithMusics {
+                    playlist,
+                    musics: Some(musics),
+                });
+            }
+            result
+        } else {
+            playlists
+                .into_iter()
+                .map(|playlist| PlaylistWithMusics {
+                    playlist,
+                    musics: None,
+                })
+                .collect()
+        };
 
-        for playlist in playlists {
-            let musics = self.music_repository.find_by_playlist(&playlist).await?;
-            playlists_with_musics.push(PlaylistWithMusics {
-                playlist,
-                musics,
-            });
-        }
-
-        Ok(GetPlaylistsWithMusicsResponse {
+        Ok(GetPlaylistResponse {
             playlists: playlists_with_musics,
         })
     }
+
 
     pub async fn get_playlist_musics(
         &self,
@@ -109,17 +99,23 @@ impl PlaylistService {
     pub async fn get_shared_playlists(
         &self,
         user: UserModel,
-    ) -> Result<GetPlaylistResponse, DbErr> {
-        match self.playlist_repository.find_shared_playlist(&user).await {
-            Ok(playlists) => {
-                let response = GetPlaylistResponse { vec: playlists };
-                Ok(response)
-            }
-            Err(e) => {
-                error!("Error fetching shared playlists: {:?}", e);
-                Err(e)
-            }
-        }
+    ) -> Result<GetPlaylistResponse, AppError> {
+        let playlists = self
+            .playlist_repository
+            .find_shared_playlist(&user)
+            .await?;
+
+        let playlists_without_musics = playlists
+            .into_iter()
+            .map(|playlist| PlaylistWithMusics {
+                playlist,
+                musics: None,
+            })
+            .collect();
+
+        Ok(GetPlaylistResponse {
+            playlists: playlists_without_musics,
+        })
     }
 
     pub async fn get_shared_playlists_with_details(
