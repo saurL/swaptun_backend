@@ -131,16 +131,39 @@ impl PlaylistService {
         user: &UserModel,
         include_musics: bool,
     ) -> Result<SharedPlaylistsResponse, AppError> {
-        let details = self
+        log::info!("Fetching shared playlists for user_id: {}, include_musics: {}", user.id, include_musics);
+
+        let details = match self
             .playlist_repository
             .find_shared_playlist_with_details(user)
-            .await?;
+            .await
+        {
+            Ok(d) => {
+                log::info!("Found {} shared playlist entries", d.len());
+                d
+            }
+            Err(e) => {
+                error!("Failed to find shared playlists from repository: {:?}", e);
+                return Err(e.into());
+            }
+        };
 
         let mut shared_playlists = Vec::new();
 
         for (shared, playlist_model, shared_by) in details {
+            log::debug!("Processing shared playlist id: {}, playlist: {}", shared.id, playlist_model.name);
+
             let musics = if include_musics {
-                Some(self.music_repository.find_by_playlist(&playlist_model).await?)
+                match self.music_repository.find_by_playlist(&playlist_model).await {
+                    Ok(m) => {
+                        log::debug!("Found {} musics for playlist {}", m.len(), playlist_model.id);
+                        Some(m)
+                    }
+                    Err(e) => {
+                        error!("Failed to fetch musics for playlist {}: {:?}", playlist_model.id, e);
+                        return Err(e.into());
+                    }
+                }
             } else {
                 None
             };
@@ -156,6 +179,7 @@ impl PlaylistService {
             });
         }
 
+        log::info!("Successfully built {} shared playlists response", shared_playlists.len());
         Ok(SharedPlaylistsResponse { shared_playlists })
     }
 

@@ -55,20 +55,41 @@ async fn get_user_playlists(
 
 async fn get_shared_playlists(
     db: web::Data<DbConn>,
-    query: web::Json<GetPlaylistsParams>,
+    query: web::Json<GetSharedPlaylistsParams>,
     claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let claims = claims.into_inner();
+    log::info!("Getting shared playlists for user_id: {}", claims.user_id);
 
     let user_service = UserService::new(db.get_ref().clone().into());
-    let user = user_service.get_user_from_claims(claims).await?;
+    let user = match user_service.get_user_from_claims(claims).await {
+        Ok(u) => u,
+        Err(e) => {
+            error!("Failed to get user from claims: {:?}", e);
+            return Err(e);
+        }
+    };
 
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
     let params = query.into_inner();
+    log::info!("include_musics: {}", params.include_musics);
 
-    let playlists = playlist_service
+    let playlists = match playlist_service
         .get_shared_playlists_with_details(&user, params.include_musics)
-        .await?;
+        .await
+    {
+        Ok(p) => {
+            log::info!(
+                "Successfully fetched {} shared playlists",
+                p.shared_playlists.len()
+            );
+            p
+        }
+        Err(e) => {
+            error!("Failed to fetch shared playlists: {:?}", e);
+            return Err(e);
+        }
+    };
 
     Ok(HttpResponse::Ok().json(playlists))
 }

@@ -30,6 +30,11 @@ pub struct GetPlaylistsParams {
     pub include_musics: bool,
 }
 
+#[derive(Deserialize, Serialize, Validate)]
+pub struct GetSharedPlaylistsParams {
+    pub include_musics: bool,
+}
+
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Playlist {
     pub playlist: PlaylistModel,
