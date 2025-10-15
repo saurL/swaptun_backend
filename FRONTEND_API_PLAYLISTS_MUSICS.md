@@ -15,6 +15,7 @@ L'API de récupération des playlists a été améliorée pour permettre d'inclu
 **Méthode**: GET
 
 **Corps de la requête** (JSON):
+
 ```json
 {
   "origin": "Spotify" | "AppleMusic" | "YoutubeMusic" | "Deezer" | "Local" | null,
@@ -23,6 +24,7 @@ L'API de récupération des playlists a été améliorée pour permettre d'inclu
 ```
 
 **Paramètres**:
+
 - `origin` (PlaylistOrigin, optionnel): Filtre les playlists par origine/plateforme. Si null, retourne toutes les playlists.
 - `include_musics` (boolean, optionnel, défaut: false): Si true, inclut la liste des musiques pour chaque playlist.
 
@@ -114,9 +116,11 @@ L'API de récupération des playlists a été améliorée pour permettre d'inclu
 **Méthode**: GET
 
 **Paramètres d'URL**:
+
 - `{id}` (integer): L'ID de la playlist
 
 **Réponse en cas de succès** (Status: 200 OK):
+
 ```json
 {
   "playlist_id": 1,
@@ -140,6 +144,7 @@ L'API de récupération des playlists a été améliorée pour permettre d'inclu
 ```
 
 **Champs de la réponse**:
+
 - `playlist_id` (integer): L'ID de la playlist
 - `musics` (array): Liste des musiques dans la playlist
   - `title` (string): Titre de la musique
@@ -153,6 +158,7 @@ L'API de récupération des playlists a été améliorée pour permettre d'inclu
 ### Exemple 1: Récupérer toutes les playlists sans musiques
 
 **Requête**:
+
 ```http
 GET /api/playlists
 Authorization: Bearer <jwt_token>
@@ -165,6 +171,7 @@ Content-Type: application/json
 ```
 
 **Réponse**:
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -188,6 +195,7 @@ Content-Type: application/json
 ### Exemple 2: Récupérer les playlists Spotify avec leurs musiques
 
 **Requête**:
+
 ```http
 GET /api/playlists
 Authorization: Bearer <jwt_token>
@@ -200,6 +208,7 @@ Content-Type: application/json
 ```
 
 **Réponse**:
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -232,12 +241,14 @@ Content-Type: application/json
 ### Exemple 3: Récupérer les musiques d'une playlist spécifique
 
 **Requête**:
+
 ```http
 GET /api/playlists/1/musics
 Authorization: Bearer <jwt_token>
 ```
 
 **Réponse**:
+
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -284,11 +295,11 @@ interface GetPlaylistsResponse {
 }
 
 async function getPlaylists(origin?: PlaylistOrigin): Promise<Playlist[]> {
-  const response = await fetch('/api/playlists', {
-    method: 'GET',
+  const response = await fetch("/api/playlists", {
+    method: "GET",
     headers: {
-      'Authorization': `Bearer ${getToken()}`,
-      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       origin: origin || null,
@@ -301,12 +312,12 @@ async function getPlaylists(origin?: PlaylistOrigin): Promise<Playlist[]> {
     return data.vec;
   }
 
-  throw new Error('Failed to fetch playlists');
+  throw new Error("Failed to fetch playlists");
 }
 
 // Utilisation
 const playlists = await getPlaylists(); // Toutes les playlists
-const spotifyPlaylists = await getPlaylists('Spotify'); // Seulement Spotify
+const spotifyPlaylists = await getPlaylists("Spotify"); // Seulement Spotify
 ```
 
 ### 2. Charger les playlists avec toutes leurs musiques (pour un affichage détaillé)
@@ -320,17 +331,17 @@ interface Music {
   genre: string | null;
 }
 
-interface PlaylistWithMusics extends Playlist {
+interface Playlistextends Playlist {
   musics: Music[];
 }
 
 interface GetPlaylistsWithMusicsResponse {
-  playlists: PlaylistWithMusics[];
+  playlists: Playlist[];
 }
 
 async function getPlaylistsWithMusics(
   origin?: PlaylistOrigin
-): Promise<PlaylistWithMusics[]> {
+): Promise<Playlist[]> {
   const response = await fetch('/api/playlists', {
     method: 'GET',
     headers: {
@@ -353,7 +364,7 @@ async function getPlaylistsWithMusics(
 
 // Utilisation dans un composant React
 function PlaylistsWithMusicsList() {
-  const [playlists, setPlaylists] = useState<PlaylistWithMusics[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
   useEffect(() => {
     getPlaylistsWithMusics().then(setPlaylists);
@@ -389,9 +400,9 @@ interface GetPlaylistMusicsResponse {
 
 async function getPlaylistMusics(playlistId: number): Promise<Music[]> {
   const response = await fetch(`/api/playlists/${playlistId}/musics`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Authorization': `Bearer ${getToken()}`,
+      Authorization: `Bearer ${getToken()}`,
     },
   });
 
@@ -400,7 +411,7 @@ async function getPlaylistMusics(playlistId: number): Promise<Music[]> {
     return data.musics;
   }
 
-  throw new Error('Failed to fetch playlist musics');
+  throw new Error("Failed to fetch playlist musics");
 }
 
 // Utilisation avec chargement à la demande
@@ -414,7 +425,7 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
       const data = await getPlaylistMusics(playlist.id);
       setMusics(data);
     } catch (error) {
-      console.error('Error loading musics:', error);
+      console.error("Error loading musics:", error);
     } finally {
       setLoading(false);
     }
@@ -424,7 +435,7 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
     <div className="playlist-card">
       <h3>{playlist.name}</h3>
       <button onClick={loadMusics} disabled={loading}>
-        {loading ? 'Chargement...' : 'Voir les musiques'}
+        {loading ? "Chargement..." : "Voir les musiques"}
       </button>
 
       {musics && (
@@ -453,11 +464,11 @@ class PlaylistService {
 
   // Méthode 1: Chargement rapide pour l'affichage initial
   async getPlaylistsQuick(origin?: PlaylistOrigin): Promise<Playlist[]> {
-    const response = await fetch('/api/playlists', {
-      method: 'GET',
+    const response = await fetch("/api/playlists", {
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         origin: origin || null,
@@ -470,12 +481,12 @@ class PlaylistService {
   }
 
   // Méthode 2: Chargement complet pour l'export ou l'affichage détaillé
-  async getPlaylistsFull(origin?: PlaylistOrigin): Promise<PlaylistWithMusics[]> {
-    const response = await fetch('/api/playlists', {
-      method: 'GET',
+  async getPlaylistsFull(origin?: PlaylistOrigin): Promise<Playlist[]> {
+    const response = await fetch("/api/playlists", {
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         origin: origin || null,
@@ -490,9 +501,9 @@ class PlaylistService {
   // Méthode 3: Chargement à la demande d'une seule playlist
   async getPlaylistMusics(playlistId: number): Promise<Music[]> {
     const response = await fetch(`/api/playlists/${playlistId}/musics`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${this.token}`,
+        Authorization: `Bearer ${this.token}`,
       },
     });
 
@@ -556,6 +567,7 @@ function PlaylistsPage() {
 ## Gestion des erreurs
 
 **401 Unauthorized**: Token JWT manquant ou invalide
+
 ```json
 {
   "error": "Unauthorized",
@@ -564,6 +576,7 @@ function PlaylistsPage() {
 ```
 
 **404 Not Found**: Playlist introuvable (pour l'endpoint `/api/playlists/{id}/musics`)
+
 ```json
 {
   "error": "NotFound",
@@ -572,6 +585,7 @@ function PlaylistsPage() {
 ```
 
 **500 Internal Server Error**: Erreur serveur
+
 ```json
 {
   "error": "InternalServerError",
@@ -604,7 +618,7 @@ interface Playlist {
   updated_on: string; // Format ISO 8601
 }
 
-interface PlaylistWithMusics extends Playlist {
+interface Playlistextends Playlist {
   musics: Music[];
 }
 
@@ -620,7 +634,7 @@ interface GetPlaylistsResponse {
 }
 
 interface GetPlaylistsWithMusicsResponse {
-  playlists: PlaylistWithMusics[];
+  playlists: Playlist[];
 }
 
 interface GetPlaylistMusicsResponse {
@@ -632,19 +646,23 @@ interface GetPlaylistMusicsResponse {
 ## Notes importantes
 
 1. **Performance**:
+
    - Utilisez `include_musics: false` pour un chargement initial rapide
    - Utilisez `include_musics: true` seulement quand vous avez besoin de toutes les musiques de toutes les playlists
    - Utilisez `/api/playlists/{id}/musics` pour charger les musiques à la demande
 
 2. **Compatibilité**:
+
    - L'ancien comportement est préservé: si `include_musics` est omis ou false, la réponse est identique à avant
    - Les deux types de réponse ont des structures différentes pour éviter toute confusion
 
 3. **Filtrage par origine**:
+
    - Utilisez `origin: null` pour récupérer toutes les playlists
    - Spécifiez une origine pour filtrer (ex: "Spotify", "AppleMusic", etc.)
 
 4. **Cache côté frontend**:
+
    - Considérez implémenter un cache pour éviter de recharger les musiques déjà récupérées
    - Invalidez le cache quand une playlist est modifiée
 

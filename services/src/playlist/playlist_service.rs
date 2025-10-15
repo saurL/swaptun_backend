@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use super::{
-    CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistMusicsResponse,
-    GetPlaylistResponse, GetPlaylistsParams, PlaylistWithMusics,
-    UpdatePlaylistRequest,
+    CreatePlaylistRequest, DeletePlaylistRequest, GetPlaylistMusicsResponse, GetPlaylistResponse,
+    GetPlaylistsParams, Playlist, UpdatePlaylistRequest,
 };
 use crate::{error::AppError, SharedPlaylist, SharedPlaylistsResponse, UserInfo};
 
@@ -61,7 +60,7 @@ impl PlaylistService {
             let mut result = Vec::new();
             for playlist in playlists {
                 let musics = self.music_repository.find_by_playlist(&playlist).await?;
-                result.push(PlaylistWithMusics {
+                result.push(Playlist {
                     playlist,
                     musics: Some(musics),
                 });
@@ -70,7 +69,7 @@ impl PlaylistService {
         } else {
             playlists
                 .into_iter()
-                .map(|playlist| PlaylistWithMusics {
+                .map(|playlist| Playlist {
                     playlist,
                     musics: None,
                 })
@@ -81,7 +80,6 @@ impl PlaylistService {
             playlists: playlists_with_musics,
         })
     }
-
 
     pub async fn get_playlist_musics(
         &self,
@@ -99,43 +97,64 @@ impl PlaylistService {
     pub async fn get_shared_playlists(
         &self,
         user: UserModel,
+        include_musics: bool,
     ) -> Result<GetPlaylistResponse, AppError> {
-        let playlists = self
-            .playlist_repository
-            .find_shared_playlist(&user)
-            .await?;
+        let playlists = self.playlist_repository.find_shared_playlist(&user).await?;
 
-        let playlists_without_musics = playlists
-            .into_iter()
-            .map(|playlist| PlaylistWithMusics {
-                playlist,
-                musics: None,
-            })
-            .collect();
+        let playlists_with_optional_musics = if include_musics {
+            let mut result = Vec::new();
+            for playlist in playlists {
+                let musics = self.music_repository.find_by_playlist(&playlist).await?;
+                result.push(Playlist {
+                    playlist,
+                    musics: Some(musics),
+                });
+            }
+            result
+        } else {
+            playlists
+                .into_iter()
+                .map(|playlist| Playlist {
+                    playlist,
+                    musics: None,
+                })
+                .collect()
+        };
 
         Ok(GetPlaylistResponse {
-            playlists: playlists_without_musics,
+            playlists: playlists_with_optional_musics,
         })
     }
 
     pub async fn get_shared_playlists_with_details(
         &self,
         user: &UserModel,
+        include_musics: bool,
     ) -> Result<SharedPlaylistsResponse, AppError> {
         let details = self
             .playlist_repository
             .find_shared_playlist_with_details(user)
             .await?;
 
-        let shared_playlists = details
-            .into_iter()
-            .map(|(shared, playlist, shared_by)| SharedPlaylist {
+        let mut shared_playlists = Vec::new();
+
+        for (shared, playlist_model, shared_by) in details {
+            let musics = if include_musics {
+                Some(self.music_repository.find_by_playlist(&playlist_model).await?)
+            } else {
+                None
+            };
+
+            shared_playlists.push(SharedPlaylist {
                 id: shared.id,
-                playlist,
+                playlist: Playlist {
+                    playlist: playlist_model,
+                    musics,
+                },
                 shared_by: shared_by.into(),
                 shared_at: shared.created_on.into(),
-            })
-            .collect();
+            });
+        }
 
         Ok(SharedPlaylistsResponse { shared_playlists })
     }

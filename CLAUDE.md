@@ -360,3 +360,4 @@ web::scope("/api")
 
 - crée quand c'est possible des test unitaires
 - si des changement sont fait au niveau de l'API je veux que tu rédige des consignes sur comment les implémenter au niveau du frontend ( endpoint api , cas d'usages etc ) , ces consigne s'adresse a un autre agent Claude
+- Quand tu rédige ces consignes il faut être le plus synthétique possible

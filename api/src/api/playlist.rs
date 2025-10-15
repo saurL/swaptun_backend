@@ -55,6 +55,7 @@ async fn get_user_playlists(
 
 async fn get_shared_playlists(
     db: web::Data<DbConn>,
+    query: web::Json<GetPlaylistsParams>,
     claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let claims = claims.into_inner();
@@ -63,8 +64,10 @@ async fn get_shared_playlists(
     let user = user_service.get_user_from_claims(claims).await?;
 
     let playlist_service = PlaylistService::new(db.get_ref().clone().into());
+    let params = query.into_inner();
+
     let playlists = playlist_service
-        .get_shared_playlists_with_details(&user)
+        .get_shared_playlists_with_details(&user, params.include_musics)
         .await?;
 
     Ok(HttpResponse::Ok().json(playlists))
@@ -273,10 +276,17 @@ async fn share_playlist(
     let playlist_service = PlaylistService::new(db.clone());
     let playlist = playlist_service.find_by_id(playlist_id).await?;
 
-    if let (Some(playlist), Some(shared_with_user)) = (playlist, shared_with_user) {
+    if let (Some(playlist_model), Some(shared_with_user)) = (playlist, shared_with_user) {
         playlist_service
-            .share_playlist(&shared_with_user, &playlist, &current_user)
+            .share_playlist(&shared_with_user, &playlist_model, &current_user)
             .await?;
+
+        // Récupérer les musiques pour la notification
+        let musics = playlist_service
+            .music_repository
+            .find_by_playlist(&playlist_model)
+            .await
+            .ok();
 
         // Envoyer une notification à l'utilisateur
         match NotificationService::new(db.clone()).await {
@@ -286,15 +296,30 @@ async fn share_playlist(
                 let title = "New Shared Playlist".to_string();
                 let body = format!(
                     "{} shared the playlist '{}' with you",
-                    shared_by_name, playlist.name
+                    shared_by_name, playlist_model.name
                 );
 
-                // Structure des données de notification
+                // Structure complète avec musiques
+                let playlist_data = serde_json::json!({
+                    "playlist": {
+                        "id": playlist_model.id,
+                        "name": playlist_model.name.clone(),
+                        "description": playlist_model.description.clone(),
+                        "origin": playlist_model.origin,
+                        "origin_id": playlist_model.origin_id.clone(),
+                        "user_id": playlist_model.user_id,
+                        "created_on": playlist_model.created_on,
+                        "updated_on": playlist_model.updated_on,
+                    },
+                    "musics": musics,
+                });
+
                 let shared_notification = serde_json::json!({
-                    "playlist_id": playlist.id,
-                    "playlist_name": playlist.name.clone(),
-                    "shared_by_id": current_user.id,
-                    "shared_by_username": current_user.username.clone(),
+                    "playlist": playlist_data,
+                    "shared_by": {
+                        "id": current_user.id,
+                        "username": current_user.username.clone(),
+                    },
                 });
 
                 let data = serde_json::json!({
@@ -311,7 +336,7 @@ async fn share_playlist(
                         log::info!(
                             "Notification sent to user {} for playlist {} shared by {}",
                             shared_with_user.id,
-                            playlist.id,
+                            playlist_model.id,
                             current_user.id
                         );
                     }

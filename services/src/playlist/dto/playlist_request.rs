@@ -31,7 +31,7 @@ pub struct GetPlaylistsParams {
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub struct PlaylistWithMusics {
+pub struct Playlist {
     pub playlist: PlaylistModel,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub musics: Option<Vec<swaptun_models::MusicModel>>,
@@ -39,7 +39,7 @@ pub struct PlaylistWithMusics {
 
 #[derive(Deserialize, Serialize, Validate, Clone)]
 pub struct GetPlaylistResponse {
-    pub playlists: Vec<PlaylistWithMusics>,
+    pub playlists: Vec<Playlist>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -72,7 +72,7 @@ pub struct SharedPlaylistsResponse {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct SharedPlaylist {
     pub id: i32,
-    pub playlist: PlaylistModel,
+    pub playlist: Playlist,
     pub shared_by: UserInfo,
     pub shared_at: DateTime<Utc>,
 }
@@ -159,8 +159,8 @@ mod tests {
 
     #[test]
     fn test_get_playlist_musics_response_serialization() {
-        use swaptun_models::MusicModel;
         use chrono::NaiveDate;
+        use swaptun_models::MusicModel;
 
         let music = MusicModel {
             title: "Test Song".to_string(),
@@ -183,8 +183,8 @@ mod tests {
 
     #[test]
     fn test_playlist_with_musics_serialization_without_musics() {
-        use swaptun_models::PlaylistModel;
         use chrono::{FixedOffset, Utc};
+        use swaptun_models::PlaylistModel;
 
         let playlist = PlaylistModel {
             id: 1,
@@ -197,7 +197,7 @@ mod tests {
             updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
         };
 
-        let playlist_with_musics = PlaylistWithMusics {
+        let playlist_with_musics = Playlist {
             playlist,
             musics: None,
         };
@@ -209,8 +209,8 @@ mod tests {
 
     #[test]
     fn test_playlist_with_musics_serialization_with_musics() {
-        use swaptun_models::{MusicModel, PlaylistModel};
         use chrono::{FixedOffset, NaiveDate, Utc};
+        use swaptun_models::{MusicModel, PlaylistModel};
 
         let playlist = PlaylistModel {
             id: 1,
@@ -231,7 +231,7 @@ mod tests {
             genre: Some("Rock".to_string()),
         };
 
-        let playlist_with_musics = PlaylistWithMusics {
+        let playlist_with_musics = Playlist {
             playlist,
             musics: Some(vec![music]),
         };
@@ -245,8 +245,8 @@ mod tests {
 
     #[test]
     fn test_get_playlist_response_serialization() {
-        use swaptun_models::PlaylistModel;
         use chrono::{FixedOffset, Utc};
+        use swaptun_models::PlaylistModel;
 
         let playlist = PlaylistModel {
             id: 1,
@@ -260,7 +260,7 @@ mod tests {
         };
 
         let response = GetPlaylistResponse {
-            playlists: vec![PlaylistWithMusics {
+            playlists: vec![Playlist {
                 playlist,
                 musics: None,
             }],
