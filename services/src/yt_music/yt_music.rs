@@ -426,6 +426,7 @@ impl YoutubeMusicService {
             origin: PlaylistOrigin::YoutubeMusic,
             description: None,
             origin_id: playlist.playlist_id.get_playlist_id().to_string(),
+            image_url: None, // YouTube Music LibraryPlaylist doesn't expose image URLs
         };
         let tracks = self.get_playlist_track(playlist, client).await?;
         if tracks.is_empty() {

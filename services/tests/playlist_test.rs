@@ -81,6 +81,7 @@ async fn test_get_shared_playlists() {
         description: Some("A playlist to share".to_string()),
         origin: PlaylistOrigin::Spotify,
         origin_id: "shared123".into(),
+        image_url: None,
     };
 
     let playlist = playlist_service
@@ -148,6 +149,7 @@ async fn test_user_and_shared_playlists_separation() {
         description: Some("User's own playlist".to_string()),
         origin: PlaylistOrigin::Spotify,
         origin_id: "user123".into(),
+        image_url: None,
     };
 
     let _user_playlist = playlist_service
@@ -161,6 +163,7 @@ async fn test_user_and_shared_playlists_separation() {
         description: Some("A shared playlist".to_string()),
         origin: PlaylistOrigin::Deezer,
         origin_id: "shared456".into(),
+        image_url: None,
     };
 
     let shared_playlist = playlist_service
@@ -204,12 +207,14 @@ async fn create_test_playlists(playlist_service: &PlaylistService, user_id: i32)
         description: Some("My first Spotify playlist".to_string()),
         origin: PlaylistOrigin::Spotify,
         origin_id: "aae".into(),
+        image_url: None,
     };
     let spotify_playlist2 = CreatePlaylistRequest {
         name: "Spotify Playlist 2".to_string(),
         description: Some("My second Spotify playlist".to_string()),
         origin: PlaylistOrigin::Spotify,
         origin_id: "aae".into(),
+        image_url: None,
     };
 
     // Create Deezer playlist
@@ -218,6 +223,7 @@ async fn create_test_playlists(playlist_service: &PlaylistService, user_id: i32)
         description: Some("My Deezer playlist".to_string()),
         origin: PlaylistOrigin::Deezer,
         origin_id: "aae".into(),
+        image_url: None,
     };
 
     // Save playlists

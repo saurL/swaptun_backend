@@ -56,6 +56,7 @@ mod tests {
             description: Option<String>,
             origin: PlaylistOrigin,
             origin_id: String,
+            image_url: Option<String>,
         }
 
         let create_playlist_request = CreatePlaylistRequest {
@@ -63,6 +64,7 @@ mod tests {
             description: Some("A test playlist".to_string()),
             origin: PlaylistOrigin::Spotify,
             origin_id: "test_origin_id".to_string(),
+            image_url: None,
         };
 
         let req = test::TestRequest::post()

@@ -360,11 +360,16 @@ impl SpotifyService {
         spotify: &AuthCodeSpotify,
     ) -> Result<(), AppError> {
         let mut tracks = spotify.playlist_items(playlist.id.clone(), None, None);
+
+        // Extract image URL from playlist (use first/largest image if available)
+        let image_url = playlist.images.first().map(|img| img.url.clone());
+
         let request = CreatePlaylistRequest {
             name: playlist.name,
             origin: PlaylistOrigin::Spotify,
             description: None,
             origin_id: playlist.id.to_string(),
+            image_url,
         };
         let playlist = self.playlist_service.create_or_get(request, &user).await?;
 

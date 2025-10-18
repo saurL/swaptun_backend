@@ -251,11 +251,18 @@ impl AppleMusicService {
             .await?;
         let title = playlist.attributes.name.clone();
 
+        // Extract artwork URL if available (use 600x600 as default size)
+        let image_url = playlist
+            .attributes
+            .artwork
+            .map(|artwork| artwork.url_square(600));
+
         let request = CreatePlaylistRequest {
             name: playlist.attributes.name,
             origin_id: playlist.id.clone(),
             description: None,
             origin: playlist::PlaylistOrigin::AppleMusic,
+            image_url,
         };
         let created_playlist = self.playlist_service.create_or_get(request, user).await?;
 

@@ -40,6 +40,7 @@ mod shared_playlist_tests {
             description: Some(format!("Test playlist {}", name)),
             origin: PlaylistOrigin::Spotify,
             origin_id: "test_id".to_string(),
+            image_url: None,
         };
 
         let playlist = service.create(request, user_id).await.unwrap();

@@ -9,6 +9,7 @@ pub struct CreatePlaylistRequest {
     pub description: Option<String>,
     pub origin: PlaylistOrigin,
     pub origin_id: String,
+    pub image_url: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Validate)]
@@ -200,6 +201,7 @@ mod tests {
             origin_id: "test_id".to_string(),
             created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
             updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            image_url: None,
         };
 
         let playlist_with_musics = Playlist {
@@ -226,6 +228,7 @@ mod tests {
             origin_id: "test_id".to_string(),
             created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
             updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            image_url: None,
         };
 
         let music = MusicModel {
@@ -262,6 +265,7 @@ mod tests {
             origin_id: "spotify_id".to_string(),
             created_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
             updated_on: Utc::now().with_timezone(&FixedOffset::east_opt(0).unwrap()),
+            image_url: None,
         };
 
         let response = GetPlaylistResponse {

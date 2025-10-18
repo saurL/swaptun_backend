@@ -8,9 +8,9 @@ use swaptun_services::auth::Claims;
 use swaptun_services::error::AppError;
 use swaptun_services::{
     AppleMusicService, CreateMusicRequest, CreatePlaylistRequest, DeezerService,
-    DeletePlaylistRequest, GetPlaylistsParams, NotificationService, PlaylistOrigin,
-    PlaylistService, SendPlaylistRequest, SendPlaylistResponse, SharePlaylistRequest,
-    SpotifyService, UpdatePlaylistRequest, UserService, YoutubeMusicService,
+    DeletePlaylistRequest, GetPlaylistsParams, GetSharedPlaylistsParams, NotificationService,
+    PlaylistOrigin, PlaylistService, SendPlaylistRequest, SendPlaylistResponse,
+    SharePlaylistRequest, SpotifyService, UpdatePlaylistRequest, UserService, YoutubeMusicService,
 };
 
 pub fn configure(cfg: &mut web::ServiceConfig) {

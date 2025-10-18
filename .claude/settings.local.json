@@ -6,7 +6,8 @@
       "Bash(cargo check:*)",
       "Read(//c/Users/sauro/.cargo/git/checkouts/apple-music-api-572a60d4a408591c/593b8bc/src/**)",
       "Read(//c/Users/sauro/.cargo/git/checkouts/apple-music-api-572a60d4a408591c/593b8bc/**)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "Bash(cargo tree:*)"
     ],
     "deny": [],
     "ask": []

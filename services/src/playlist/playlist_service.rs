@@ -194,6 +194,7 @@ impl PlaylistService {
             user_id: sea_orm::ActiveValue::Set(user_id),
             origin: sea_orm::ActiveValue::Set(request.origin),
             origin_id: sea_orm::ActiveValue::Set(request.origin_id),
+            image_url: sea_orm::ActiveValue::Set(request.image_url),
             ..Default::default()
         };
 
