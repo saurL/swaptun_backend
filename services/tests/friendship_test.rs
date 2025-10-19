@@ -264,11 +264,7 @@ mod friendship_tests {
         // User2 should NOT see User1 in friends
         let user2 = service.find_by_id(user2_id).await.unwrap().unwrap();
         let friends2 = service.get_friends(&user2).await.unwrap();
-        assert_eq!(
-            friends2.len(),
-            0,
-            "User2 should not see User1 as friend"
-        );
+        assert_eq!(friends2.len(), 0, "User2 should not see User1 as friend");
     }
 
     #[tokio::test]
@@ -296,9 +292,32 @@ mod friendship_tests {
         let user1 = service.find_by_id(user1_id).await.unwrap().unwrap();
         let friends1 = service.get_friends(&user1).await.unwrap();
         assert_eq!(friends1.len(), 1);
-
+        assert_eq!(friends1[0].id, user2_id);
         let user2 = service.find_by_id(user2_id).await.unwrap().unwrap();
         let friends2 = service.get_friends(&user2).await.unwrap();
         assert_eq!(friends2.len(), 1);
+        assert_eq!(friends2[0].id, user1_id);
+    }
+
+    #[tokio::test]
+    async fn test_user_add_friend_unilateral() {
+        let test_db = TestDatabase::new().await;
+        let db = test_db.get_db();
+        let service = UserService::new(db.clone());
+
+        // Create users
+        let user1_id = create_test_user(&service, "tom", "tom@test.com").await;
+        let user2_id = create_test_user(&service, "jerry", "jerry@test.com").await;
+
+        // User1 adds User2
+        let result1 = service.add_friend(user1_id, user2_id).await;
+        assert!(result1.is_ok(), "User1 should be able to add User2");
+        let user1 = service.find_by_id(user1_id).await.unwrap().unwrap();
+        let friends1 = service.get_friends(&user1).await.unwrap();
+        assert_eq!(friends1.len(), 1);
+        assert_eq!(friends1[0].id, user2_id);
+        let user2 = service.find_by_id(user2_id).await.unwrap().unwrap();
+        let friends2 = service.get_friends(&user2).await.unwrap();
+        assert_eq!(friends2.len(), 0);
     }
 }

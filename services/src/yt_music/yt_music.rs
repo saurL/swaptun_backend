@@ -16,7 +16,8 @@ use ytmapi_rs::{
 use crate::AddTokenRequest;
 use crate::{
     error::AppError, music::dto::CreateMusicRequest, music::music_service::MusicService,
-    playlist::playlist_service::PlaylistService, CreatePlaylistRequest, YoutubeUrlResponse,
+    notification::notification::NotificationService, playlist::playlist_service::PlaylistService,
+    CreatePlaylistRequest, YoutubeUrlResponse,
 };
 use apple_music_api::catalog::Artist;
 use log::{error, info};
@@ -479,6 +480,29 @@ impl YoutubeMusicService {
                 .remove_music(&playlist_model, &local_track)
                 .await?;
         }
+
+        // Send silent notification with only playlist ID (lightweight)
+        let notification_data = serde_json::json!({
+            "type": "playlist_sync",
+            "playlist_id": playlist_model.id.to_string(),
+            "origin": "YoutubeMusic",
+        });
+
+        // Send silent notification (ignore errors to not block import)
+        if let Ok(notification_service) = NotificationService::new(self.db.clone()).await {
+            if let Err(e) = notification_service
+                .send_silent_data_to_user(user.id, notification_data)
+                .await
+            {
+                error!(
+                    "Failed to send silent notification for playlist {}: {:?}",
+                    playlist.title, e
+                );
+            } else {
+                info!("Silent notification sent for playlist: {}", playlist.title);
+            }
+        }
+
         Ok(())
     }
 

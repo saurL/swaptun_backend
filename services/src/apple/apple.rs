@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use crate::{error::AppError, GetDeveloperToken};
 use crate::{
-    AddTokenRequest, CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
+    AddTokenRequest, CreateMusicRequest, CreatePlaylistRequest, MusicService, NotificationService,
+    PlaylistService,
 };
 use apple_music_api::catalog::Song;
 use apple_music_api::config::ClientConfigBuilder;
@@ -326,6 +327,29 @@ impl AppleMusicService {
                 .remove_music(&created_playlist, &local_track)
                 .await?;
         }
+
+        // Send silent notification with only playlist ID (lightweight)
+        let notification_data = serde_json::json!({
+            "type": "playlist_sync",
+            "playlist_id": created_playlist.id.to_string(),
+            "origin": "AppleMusic",
+        });
+
+        // Send silent notification (ignore errors to not block import)
+        if let Ok(notification_service) = NotificationService::new(self.db.clone()).await {
+            if let Err(e) = notification_service
+                .send_silent_data_to_user(user.id, notification_data)
+                .await
+            {
+                error!(
+                    "Failed to send silent notification for playlist {}: {:?}",
+                    title, e
+                );
+            } else {
+                info!("Silent notification sent for playlist: {}", title);
+            }
+        }
+
         Ok(())
     }
 

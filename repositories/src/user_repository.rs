@@ -183,6 +183,7 @@ impl UserRepository {
 
     pub async fn find_friends(&self, user_id: i32) -> Result<Vec<UserModel>, DbErr> {
         let friend_ids = self.get_friend_ids(user_id).await?;
+        println!("Friend IDs: {:?}", friend_ids);
         UserEntity::find()
             .filter(UserColumn::Id.is_in(friend_ids))
             .all(&*self.db)
@@ -191,11 +192,12 @@ impl UserRepository {
 
     async fn get_friend_ids(&self, user_id: i32) -> Result<Vec<i32>, DbErr> {
         // Get all friendships where user_id added someone
+        println!("Getting friends for user_id: {}", user_id);
         let friendships_initiated = FriendshipEntity::find()
             .filter(FriendshipColumn::UserId.eq(user_id))
             .all(&*self.db)
             .await?;
-
+        /*
         let mut mutual_friend_ids = Vec::new();
 
         // For each friendship, check if the reverse relationship exists (mutual)
@@ -214,8 +216,8 @@ impl UserRepository {
                 mutual_friend_ids.push(friendship.friend_id);
             }
         }
-
-        Ok(mutual_friend_ids)
+         */
+        Ok(friendships_initiated.iter().map(|m| m.friend_id).collect())
     }
 
     async fn build_search_user_query(

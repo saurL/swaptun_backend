@@ -170,8 +170,11 @@ pub async fn get_friends(
     let user = user_service
         .get_user_from_claims(claims.into_inner())
         .await?;
+    println!("User: {:?}", user);
     let friends = user_service.get_friends(&user).await?;
+    println!("Friends: {:?}", friends);
     let friends_bean: Vec<UserBean> = friends.into_iter().map(|user| user.into()).collect();
+    println!("Friends Bean: {:?}", friends_bean);
     Ok(HttpResponse::Ok().json(friends_bean))
 }
 
@@ -181,6 +184,10 @@ pub async fn add_friend(
     claims: web::ReqData<Claims>,
 ) -> Result<HttpResponse, AppError> {
     let user_service = UserService::new(db.get_ref().clone().into());
+    println!(
+        "Adding friend: user_id={}, friend_id={}",
+        claims.user_id, request.friend_id
+    );
     user_service
         .add_friend(claims.user_id, request.friend_id)
         .await?;

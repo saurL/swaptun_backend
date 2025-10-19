@@ -528,4 +528,92 @@ impl NotificationService {
         }
         Ok(responses)
     }
+
+    /// Envoie une notification silencieuse (data-only) à un utilisateur
+    /// Cette notification ne s'affiche pas à l'écran mais permet de transmettre des données
+    /// au frontend pour mettre à jour l'UI en arrière-plan
+    pub async fn send_silent_data_to_user(
+        &self,
+        user_id: i32,
+        data: serde_json::Value,
+    ) -> Result<Vec<NotificationResponse>, AppError> {
+        let tokens = self.get_user_fcm_token(user_id).await?;
+        let mut responses = Vec::new();
+
+        for token in tokens {
+            // Construction du message SANS notification (silencieux)
+            let mut message = Message::default();
+            message.token = Some(token.clone());
+
+            // Convertir serde_json::Value en HashMap<String, String>
+            let data_map: std::collections::HashMap<String, String> = data
+                .as_object()
+                .map(|obj| {
+                    obj.iter()
+                        .map(|(k, v)| {
+                            let value_str = match v {
+                                serde_json::Value::String(s) => s.clone(),
+                                _ => v.to_string(),
+                            };
+                            (k.clone(), value_str)
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            message.data = Some(data_map);
+
+            // Configuration Android pour notification silencieuse
+            let mut android_config = AndroidConfig::default();
+            android_config.priority = Some("high".to_string()); // High priority pour livraison immédiate
+            message.android = Some(android_config);
+
+            info!("Sending silent data notification to user {}", user_id);
+
+            // Envoi du message
+            let send_request = SendMessageRequest {
+                message: Some(message),
+                validate_only: Some(false),
+            };
+
+            match self
+                .fcm_hub
+                .projects()
+                .messages_send(send_request, &format!("projects/{}", self.project_id))
+                .doit()
+                .await
+            {
+                Ok((_, response)) => {
+                    info!("Silent notification sent successfully");
+                    responses.push(NotificationResponse {
+                        success: true,
+                        message_id: response.name.and_then(|name| {
+                            name.split('/').last().and_then(|id| id.parse().ok())
+                        }),
+                        error: None,
+                        multicast_id: None,
+                        success_count: Some(1),
+                        failure_count: Some(0),
+                        canonical_ids: None,
+                        results: None,
+                    });
+                }
+                Err(e) => {
+                    error!("Failed to send silent notification: {}", e);
+                    responses.push(NotificationResponse {
+                        success: false,
+                        message_id: None,
+                        error: Some(format!("FCM Error: {}", e)),
+                        multicast_id: None,
+                        success_count: Some(0),
+                        failure_count: Some(1),
+                        canonical_ids: None,
+                        results: None,
+                    });
+                }
+            }
+        }
+
+        Ok(responses)
+    }
 }

@@ -26,6 +26,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
             .put(update_playlist)
             .delete(delete_playlist),
     )
+    .service(web::resource("/{id}/details").get(get_playlist_details))
     .service(web::resource("/{id}/musics").get(get_playlist_musics))
     .service(
         web::resource("/{id}/music")
@@ -122,6 +123,17 @@ async fn get_playlist(
     let playlist = playlist_service.get_playlist(playlist_id).await?;
 
     Ok(HttpResponse::Ok().json(playlist))
+}
+
+async fn get_playlist_details(
+    db: web::Data<DbConn>,
+    path: web::Path<i32>,
+) -> Result<HttpResponse, AppError> {
+    let playlist_id = path.into_inner();
+    let playlist_service = PlaylistService::new(db.get_ref().clone().into());
+    let playlist_with_musics = playlist_service.get_playlist_with_musics(playlist_id).await?;
+
+    Ok(HttpResponse::Ok().json(playlist_with_musics))
 }
 
 async fn get_playlist_musics(
@@ -331,6 +343,7 @@ async fn share_playlist(
                         "user_id": playlist_model.user_id,
                         "created_on": playlist_model.created_on,
                         "updated_on": playlist_model.updated_on,
+                        "image_url": playlist_model.image_url.clone(),
                     },
                     "musics": musics,
                 });

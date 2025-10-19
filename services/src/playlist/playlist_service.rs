@@ -235,6 +235,16 @@ impl PlaylistService {
         }
     }
 
+    pub async fn get_playlist_with_musics(&self, id: i32) -> Result<Playlist, AppError> {
+        let playlist = self.get_playlist(id).await?;
+        let musics = self.music_repository.find_by_playlist(&playlist).await?;
+
+        Ok(Playlist {
+            playlist,
+            musics: Some(musics),
+        })
+    }
+
     pub async fn update(
         &self,
         request: UpdatePlaylistRequest,

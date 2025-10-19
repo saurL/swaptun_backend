@@ -591,18 +591,8 @@ impl UserService {
 
     pub async fn get_friends(&self, model: &UserModel) -> Result<Vec<UserModel>, AppError> {
         // Check if user exists
-        let user_id = model.id;
-        let user = self.find_by_id(user_id).await?;
-
-        if user.is_none() {
-            return Err(AppError::NotFound(format!(
-                "User with ID {} not found",
-                user_id
-            )));
-        }
-
         // Get friends
-        let friends = self.user_repository.find_friends(user_id).await?;
+        let friends = self.user_repository.find_friends(model.id).await?;
 
         Ok(friends)
     }

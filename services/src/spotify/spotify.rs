@@ -1,7 +1,7 @@
 use crate::error::AppError;
 use crate::{
-    music::dto::CreateMusicRequest, CreatePlaylistRequest, MusicService, PlaylistService,
-    SpotifyUrlResponse,
+    music::dto::CreateMusicRequest, CreatePlaylistRequest, MusicService, NotificationService,
+    PlaylistService, SpotifyUrlResponse,
 };
 use crate::{AddTokenRequest, DeleteTokenRequest, UpdateTokenRequest};
 use futures::StreamExt;
@@ -433,6 +433,28 @@ impl SpotifyService {
             self.playlist_service
                 .remove_music(&playlist, &local_track)
                 .await?;
+        }
+
+        // Send silent notification with only playlist ID (lightweight)
+        let notification_data = serde_json::json!({
+            "type": "playlist_sync",
+            "playlist_id": playlist.id.to_string(),
+            "origin": "Spotify",
+        });
+
+        // Send silent notification (ignore errors to not block import)
+        if let Ok(notification_service) = NotificationService::new(self.db.clone()).await {
+            if let Err(e) = notification_service
+                .send_silent_data_to_user(user.id, notification_data)
+                .await
+            {
+                error!(
+                    "Failed to send silent notification for playlist {}: {:?}",
+                    playlist.name, e
+                );
+            } else {
+                info!("Silent notification sent for playlist: {}", playlist.name);
+            }
         }
 
         Ok(())
